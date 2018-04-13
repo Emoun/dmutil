@@ -1,14 +1,13 @@
-#![feature(trace_macros)] //trace_macros!(true);
+//#![feature(trace_macros)] //trace_macros!(true);
 #[macro_use]
 extern crate dmutil;
+
+mod macros;
 
 #[test]
 fn test(){
 	assert!(reverse_tt!{[< 1]{2 -}|[6 -]{5 -}});
 }
-
-
-use std::marker::PhantomData;
 
 macro_rules! dec_struct{
 	{
@@ -23,29 +22,7 @@ macro_rules! dec_struct{
 	};
 }
 
-macro_rules! mac1{
-    
-    {
-        @recursive [[$($prefix:tt)*] $($postfix:tt)*]
-        $typ:tt
-    }=>{
-        recursive!{[$($prefix)* $typ] $($postfix)*}
-    };
-}
-macro_rules! mac2{
-    ($V:ident,$eq:tt)=>{
-        recursive!{
-            [struct $V<V,W> where W:]
-            mac1!{$eq}
-            [, V:]
-            mac1!{$eq}
-            [{ph1: PhantomData<W>,ph2: PhantomData<V>}]
-        }
-    }
-}
 
-trace_macros!{true}
-mac2!(SomeStruct, PartialEq);
 /* We want it to expand to:
 
 	struct SomeStruct < V , W >
@@ -55,4 +32,6 @@ mac2!(SomeStruct, PartialEq);
 		ph2 : PhantomData < V >
 	}
 */
+
+
 
