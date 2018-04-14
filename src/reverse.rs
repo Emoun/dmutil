@@ -48,6 +48,7 @@
 ///		assert!(reverse_tt!({2}|{>}|{1}));
 ///		assert!(reverse_tt!({4 > 3}));
 ///		assert!(reverse_tt!([< 1]{2 -}|[6 -]{5 -}));
+/// 	assert!(reverse_tt!([][1 > 2]));
 /// }
 /// ```
 ///
@@ -96,21 +97,21 @@ macro_rules! reverse_tt_internal{
 	{
 		// Reverse
 		$(@done{$($prev:tt)*})*
-		|{$($reversed:tt)*} [$start:tt $($unreversed:tt)+] $($rest:tt)*
+		|{$($reversed:tt)*} [$start:tt $($unreversed:tt)*] $($rest:tt)*
 	}=>{
 		reverse_tt!{
 			$(@done{$($prev)*})*
-			|{$start $($reversed)*} [$($unreversed)+] $($rest)*
+			|{$start $($reversed)*} [$($unreversed)*] $($rest)*
 		}
 	};
 	{
-		// Last one in a reverse
+		// nothing to a reverse
 		$(@done{$($prev:tt)*})*
-		|{$($reversed:tt)*} [$last:tt] $($rest:tt)*
+		|{$($reversed:tt)*} [] $($rest:tt)*
 	}=>{
 		reverse_tt!{
 			$(@done{$($prev)*})*
-			|{$last $($reversed)*} $($rest)*
+			|{$($reversed)*} $($rest)*
 		}
 	};
 	{
