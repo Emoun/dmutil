@@ -1,5 +1,9 @@
+#![allow(dead_code)]
 
 mod test_prefix{
+	/*
+	Tests that input can be followed by a macro call
+	*/
 	macro_rules ! test_macro{
 		( ! ! ) =>{
 			expand!{
@@ -33,6 +37,9 @@ mod test_prefix{
 	test_macro!(!!);
 }
 mod test_postfix{
+	/*
+	Tests that a macro call can be precede some non-macro tokens.
+	*/
 	macro_rules! test_macro{
 		(!!)=>{
 			expand!{
@@ -68,6 +75,9 @@ mod test_postfix{
 	test_macro!(!!);
 }
 mod test_multiple_calls{
+	/*
+	Test that multiple macro call can be done after each other
+	*/
 	use std::marker::PhantomData;
 	macro_rules! mac1{
 		{
@@ -94,261 +104,51 @@ mod test_multiple_calls{
 			}
 		}
 	}
-	trace_macros!(true);
 	mac2!(SomeStruct, PartialEq);
 }
-/*
 mod test_nested_calls{
+	/*
+	Tests that macro call can be nested, i.e. one macro's expansion is the input
+	to another macro.
+	*/
 	use std::marker::PhantomData;
 	macro_rules! mac1{
-		{}=>{
-			{ph1: PhantomData<W>,ph2: PhantomData<V>}
+		(
+			@expand[
+				[$($postfix:tt)*] $($expand_rest:tt)*
+			]
+			!!
+		)=>{
+			check_expand!{
+				[$($expand_rest)*]
+				ph1: PhantomData<W>,ph2: PhantomData<V>
+				$($postfix)*
+			}
 		};
 	}
 	macro_rules! mac2{
 		{
-			@expand [[$($prefix:tt)*] [$($postfix:tt)*]]
-			$($all:tt)*
-		} =>{
-			expand!{$($prefix)* {$($all)*} $($postfix)*}
-		};
-		{
-			$($to_expand)*
+			@expand[
+				[$($postfix:tt)*] $($expand_rest:tt)*
+			]
+			$($to_encapsulate:tt)*
 		}=>{
-			expand!{mac2!{$($to_expand)*}}
+			check_expand!{
+				[$($expand_rest)*]
+				{$($to_encapsulate)*}
+				$($postfix)*
+			}
 		}
 	}
 	macro_rules! mac3{
 		($some:ident)=>{
 			expand!{
-				struct some<V,W>
+				struct $some<V,W>
 				mac2!{
 					mac1!{!!}
 				}
 			}
 		};
 	}
-	trace_macros!(true);
 	mac3!{SomeStruct}
 }
-*/
-//--------------------------------------------------------------------------------
-/*
-	@check_expansion[
-		[[][]]
-	]
-	1 2 mac1!{ 3 4 mac2!{ 5 6 } 3 4 } 1 2
-*/
-/*
-	@check_expansion[
-		[[1][]]
-	]
-	2 mac1!{ 3 4 mac2!{ 5 6 } 3 4 } 1 2
-*/
-/*
-	@check_expansion[
-		[[2 1][]]
-	]
-	mac1!{ 3 4 mac2!{ 5 6 } 3 4 } 1 2
-*/
-/*
-	@check_expansion[
-		[[mac1 2 1][]]
-	]
-	!{ 3 4 mac2!{ 5 6 } 3 4 } 1 2
-*/
-/*
-	@check_expansion[
-		[[! mac1 2 1][]]
-	]
-	{ 3 4 mac2!{ 5 6 } 3 4 } 1 2
-*/
-/*
-	@check_expansion[
-		[[][]]
-		[[! mac1 2 1][1 2]{}]
-	]
-	3 4 mac2!{ 5 6 } 3 4
-*/
-/*
-	@check_expansion[
-		[[3][]]
-		[[! mac1 2 1][1 2]{}]
-	]
-	4 mac2!{ 5 6 } 3 4
-*/
-/*
-	@check_expansion[
-		[[4 3][]]
-		[[! mac1 2 1][1 2]{}]
-	]
-	mac2!{ 5 6 } 3 4
-*/
-/*
-	@check_expansion[
-		[[mac2 4 3][]]
-		[[! mac1 2 1][1 2]{}]
-	]
-	!{ 5 6 } 3 4
-*/
-/*
-	@check_expansion[
-		[[! mac2 4 3][]]
-		[[! mac1 2 1][1 2]{}]
-	]
-	{ 5 6 } 3 4
-*/
-/*
-	@check_expansion[
-		[[][]]
-		[[! mac2 4 3][3 4]{}]
-		[[! mac1 2 1][1 2]{}]
-	]
-	5 6
-*/
-/*
-	@check_expansion[
-		[[5][]]
-		[[! mac2 4 3][3 4]{}]
-		[[! mac1 2 1][1 2]{}]
-	]
-	6
-*/
-/*
-	@check_expansion[
-		[[6 5][]]
-		[[! mac2 4 3][3 4]{}]
-		[[! mac1 2 1][1 2]{}]
-	]
-*/
-/*
-	@check_expansion[
-		[[5][]]
-		[[! mac2 4 3][3 4]{6}]
-		[[! mac1 2 1][1 2]{}]
-	]
-*/
-/*
-	@check_expansion[
-		[[! mac2 4 3][3 4]{5 6}]
-		[[! mac1 2 1][1 2]{}]
-	]
-*/
-/*
-	mac2!{
-		@expand[
-			[3 4] [4 3]
-			[[! mac1 2 1][1 2]{}]
-		]
-		5 6
-	}
-*/
-/*
-	check_expand!{
-		[
-			[4 3]
-			[[! mac1 2 1][1 2]{}]
-		]
-		mac2Exp 3 4
-	}
-*/
-/*
-	@check_expansion[
-		[[4 3][]]
-		[[! mac1 2 1][1 2]{}]
-	]
-	mac2Exp 3 4
-*/
-/*
-	@check_expansion[
-		[[mac2Exp 4 3][]]
-		[[! mac1 2 1][1 2]{}]
-	]
-	3 4
-*/
-/*
-	@check_expansion[
-		[[4 3 mac2Exp 4 3][]]
-		[[! mac1 2 1][1 2]{}]
-	]
-*/
-/*
-	@check_expansion[
-		[[3 mac2Exp 4 3][]]
-		[[! mac1 2 1][1 2]{4}]
-	]
-*/
-/*
-	@check_expansion[
-		[[mac2Exp 4 3][]]
-		[[! mac1 2 1][1 2]{3 4}]
-	]
-*/
-/*
-	@check_expansion[
-		[[4 3][]]
-		[[! mac1 2 1][1 2]{mac2Exp 3 4}]
-	]
-*/
-/*
-	@check_expansion[
-		[[3][]]
-		[[! mac1 2 1][1 2]{4 mac2Exp 3 4}]
-	]
-*/
-/*
-	@check_expansion[
-		[[][]]
-		[[! mac1 2 1][1 2]{3 4 mac2Exp 3 4}]
-	]
-*/
-/*
-	@check_expansion[
-		[[! mac1 2 1][1 2]{3 4 mac2Exp 3 4}]
-	]
-*/
-/*
-	mac1!{
-		@expand[
-			[1 2] [2 1]
-		]
-		3 4 mac2Exp 3 4
-	}
-*/
-/*
-	check_expand!{
-		[
-			[2 1]
-		]
-		mac1Exp 1 2
-	}
-*/
-/*
-	@check_expansion[
-		[[2 1][]]
-	]
-	mac1Exp 1 2
-*/
-/*
-	@check_expansion[
-		[[mac1Exp 2 1][]]
-	]
-	1 2
-*/
-/*
-	@check_expansion[
-		[[1 mac1Exp 2 1][]]
-	]
-	2
-*/
-/*
-	@check_expansion[
-		[[2 1 mac1Exp 2 1][]]
-	]
-*/
-/*
-	reverse!{ [2 1 mac1Exp 2 1] }
-*/
-/*
-	1 2 mac1Exp 1 2
-*/
