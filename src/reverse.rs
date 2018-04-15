@@ -89,12 +89,6 @@ macro_rules! reverse_tt_internal{
 		reverse_tt!{ |{$($all)*} $($rest)*}
 	};
 	{
-		// Base case. A lone '|{}' is just unpacked
-		|{$($first:tt)*} |{$($second:tt)*}
-	}=>{
-		$($all)*
-	};
-	{
 		// Reverse
 		$(@done{$($prev:tt)*})*
 		|{$($reversed:tt)*} [$start:tt $($unreversed:tt)*] $($rest:tt)*

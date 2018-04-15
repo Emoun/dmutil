@@ -1,7 +1,6 @@
 
 #[macro_export]
 macro_rules! expand{
-	()=>{};
 	(
 		$($all:tt)*
 	)=>{
@@ -15,38 +14,25 @@ macro_rules! expand{
 }
 
 #[macro_export]
+macro_rules! check_expand{
+	(
+		[ $prefix:tt $($rest:tt)* ]
+		$($input:tt)*
+	)=>{
+		expand_internal!{
+			@check_expansion[
+				[$prefix []]
+				$($rest)*
+			]
+			$($input)*
+		}
+	};
+}
+
+#[macro_export]
 #[doc(hidden)]
 macro_rules! expand_internal{
-
-	(	// If the next tokens are a macro call. Call the macro
-		// to handle its body
-		[$($safe:tt)*] $macro_call:ident ! {$($body:tt)*} $($rest:tt)*
-	)=>{
-		$macro_call!{ @expand [[$($safe)*][$($rest)*]] $($body)* }
-	};
-	
-	
-	(	// If the next tokens isn't any of the above, it is safe to output.
-		[$($safe:tt)*] $otherwise:tt $($rest:tt)*
-	)=>{
-		expand_internal!{ [$($safe)* $otherwise] $($rest)* }
-	};
-	(	// When there are no more token, you are done.
-		[$($safe:tt)*]
-	)=>{
-		$($safe)*
-	};
-	(
-		@expand_block
-		[$($prefix:tt)*][$($postfix:tt)*]
-		{}
-	)=>{
-		expand!{ $($prefix)* @expanded_block{} $($postfix)*}
-	};
-// ------------------------------------------------------------------------------------------------
-	
-	(	// If the next token is a braced block
-		// check it
+	(	// If the next token is a block, check it (brace type)
 		@check_expansion[
 			[[$($prefix:tt)*][]]
 			$([$prefix_rest:tt $postfix_rest:tt $block_type:tt])*
@@ -57,6 +43,22 @@ macro_rules! expand_internal{
 			@check_expansion[
 				[[][]]
 				[[$($prefix)*][$($rest)*]{}]
+				$([$prefix_rest $postfix_rest $block_type])*
+			]
+			$($body)*
+		}
+	};
+	(	// If the next token is a block, check it (parenthesis type)
+		@check_expansion[
+			[[$($prefix:tt)*][]]
+			$([$prefix_rest:tt $postfix_rest:tt $block_type:tt])*
+		]
+		($($body:tt)*) $($rest:tt)*
+	)=>{
+		expand_internal!{
+			@check_expansion[
+				[[][]]
+				[[$($prefix)*][$($rest)*]()]
 				$([$prefix_rest $postfix_rest $block_type])*
 			]
 			$($body)*
@@ -80,8 +82,8 @@ macro_rules! expand_internal{
 	};
 	
 // Done ready input
-	(	// When there is no more input and the last input was a macro call (using braces)
-		//
+	(	// When there is no more input and the last input was a macro call
+		// (brace type)
 		@check_expansion[
 			[[! $macro_name:tt $($prefix:tt)*][$($postfix:tt)*]{$($body:tt)*}]
 			$([$prefix_rest:tt $postfix_rest:tt $block_type:tt])*
@@ -95,8 +97,23 @@ macro_rules! expand_internal{
 			$($body)*
 		}
 	};
+	(	// When there is no more input and the last input was a macro call
+		// (parenthesis type)
+		@check_expansion[
+			[[! $macro_name:tt $($prefix:tt)*][$($postfix:tt)*]($($body:tt)*)]
+			$([$prefix_rest:tt $postfix_rest:tt $block_type:tt])*
+		]
+	)=>{
+		$macro_name!{
+			@expand[
+				 [$($postfix)*] [$($prefix)*]
+				 $([$prefix_rest $postfix_rest $block_type])*
+			]
+			$($body)*
+		}
+	};
 	(	// When there is no more input and the last input wasn't a macro call
-		// insert it into the previous block (braces in this case)
+		// insert it into the previous block (brace type)
 		@check_expansion[
 			[[$last:tt $($last_rest:tt)*][]]
 			[$prefix:tt $postfix:tt {$($body:tt)*}]
@@ -111,7 +128,23 @@ macro_rules! expand_internal{
 			]
 		}
 	};
-	(	// When there is no more input and the last block's body has been promoted
+	(	// When there is no more input and the last input wasn't a macro call
+		// insert it into the previous block (parenthesis type)
+		@check_expansion[
+			[[$last:tt $($last_rest:tt)*][]]
+			[$prefix:tt $postfix:tt ($($body:tt)*)]
+			$([$prefix_rest:tt $postfix_rest:tt $block_type:tt])*
+		]
+	)=>{
+		expand_internal!{
+			@check_expansion[
+				[[$($last_rest)*][]]
+				[$prefix $postfix ($last $($body)*)]
+				$([$prefix_rest $postfix_rest $block_type])*
+			]
+		}
+	};
+	/*(	// When there is no more input and the last block's body has been promoted
 		// remote it
 		@check_expansion[
 			[[][]$block_type_remove:tt]
@@ -123,7 +156,7 @@ macro_rules! expand_internal{
 				$([$prefix_rest $postfix_rest $block_type])*
 			]
 		}
-	};
+	};*/
 	(	// When all input has been promoted to the previous block
 		// remove the input catcher
 		@check_expansion[
@@ -145,30 +178,98 @@ macro_rules! expand_internal{
 	)=>{
 		reverse_tt!{ [$($result)*] }
 	};
-	(	// When there is no more input and but a block
+	(	// When there is no more input but a block,
 		// the block must have already been checked,
-		// so output everything (brace type)
+		// therefore, begin promoting to prefix (brace type)
 		@check_expansion[
 			[[$($prefix:tt)*][$($postfix:tt)*]{$($body:tt)*}]
+			$([$prefix_rest:tt $postfix_rest:tt $block_type_rest:tt])*
 		]
 	)=>{
-		reverse_tt!{ [$($prefix)*]|{$($postfix)*}|{{$($body)*}} }
+		expand_internal!{
+			@promote[
+				[[{} $($prefix)*][$($postfix)*]{$($body)*}]
+				$([$prefix_rest $postfix_rest $block_type_rest])*
+			]
+		}
 	};
-}
+	(	// When there is no more input and but a block
+		// the block must have already been checked,
+		// so output everything (parenthesis type)
+		@check_expansion[
+			[[$($prefix:tt)*][$($postfix:tt)*]($($body:tt)*)]
+			$([$prefix_rest:tt $postfix_rest:tt $block_type_rest:tt])*
+		]
+	)=>{
+		expand_internal!{
+			@promote[
+				[[() $($prefix)*][$($postfix)*]($($body)*)]
+				$([$prefix_rest $postfix_rest $block_type_rest])*
+			]
+		}
+	};
 
-#[macro_export]
-macro_rules! check_expand{
-	(
-		[ $prefix:tt $($rest:tt)* ]
-		$($input:tt)*
+// Promoting blocks
+	(	// promote a checked block to prefix (brace type)
+		// We dont reverse the order in the block when
+		// it is promoted since the revert_tt! called later
+		// wont touch it.
+		@promote[
+			[[{$($other:tt)*} $($prefix:tt)*][$($postfix:tt)*]{$next:tt $($body:tt)*}]
+			$([$prefix_rest:tt $postfix_rest:tt $block_type_rest:tt])*
+		]
+	)=>{
+		expand_internal!{
+			@promote[
+				[[{$($other)* $next} $($prefix)*][$($postfix)*]{$($body)*}]
+				$([$prefix_rest $postfix_rest $block_type_rest])*
+			]
+		}
+	};
+	(	// promote a checked block to prefix (paren type)
+		// We dont reverse the order in the block when
+		// it is promoted since the revert_tt! called later
+		// wont touch it.
+		@promote[
+			[[($($other:tt)*) $($prefix:tt)*][$($postfix:tt)*]($next:tt $($body:tt)*)]
+			$([$prefix_rest:tt $postfix_rest:tt $block_type_rest:tt])*
+		]
+	)=>{
+		expand_internal!{
+			@promote[
+				[[($($other)* $next) $($prefix)*][$($postfix)*]($($body)*)]
+				$([$prefix_rest $postfix_rest $block_type_rest])*
+			]
+		}
+	};
+	(	// done promoting a checked block to prefix (brace type)
+		@promote[
+			[[$promoted:tt $($prefix:tt)*][$($postfix:tt)*]{}]
+			$([$prefix_rest:tt $postfix_rest:tt $block_type_rest:tt])*
+		]
 	)=>{
 		expand_internal!{
 			@check_expansion[
-				[$prefix []]
-				$($rest)*
+				[[$promoted $($prefix)*][]]
+				$([$prefix_rest $postfix_rest $block_type_rest])*
 			]
-			$($input)*
+			$($postfix)*
+		}
+	};
+	(	// done promoting a checked block to prefix (paren type)
+		@promote[
+			[[$promoted:tt $($prefix:tt)*][$($postfix:tt)*]()]
+			$([$prefix_rest:tt $postfix_rest:tt $block_type_rest:tt])*
+		]
+	)=>{
+		expand_internal!{
+			@check_expansion[
+				[[$promoted $($prefix)*][]]
+				$([$prefix_rest $postfix_rest $block_type_rest])*
+			]
+			$($postfix)*
 		}
 	};
 }
+
 
