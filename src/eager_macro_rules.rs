@@ -163,11 +163,7 @@ macro_rules! eager_macro_rules_internal{
 		$(#[$($metas)*])*
 		macro_rules! $macro_name{
 			$(
-				// First the pure version
-				{$($rules_grammar)*} => {$($rules_expansion)*};
-			)+
-			$(
-				// Then the eager supporting version
+				// First the eager supporting version
 				{
 					@eager[[$dollar1($dollar1 $id_1:tt)*] $dollar2($dollar2 $id_2:tt)*]
 					$($rules_grammar)*
@@ -178,6 +174,13 @@ macro_rules! eager_macro_rules_internal{
 						$dollar1($dollar1$id_1)*
 					}
 				};
+			)+
+			
+			$(
+				// Then the pure version, this is because some pure
+				// versions will throw errors when they come before their
+				// eager version. (e.g. if the rule expands to a block and nothing else).
+				{$($rules_grammar)*} => {$($rules_expansion)*};
 			)+
 		}
 	};
