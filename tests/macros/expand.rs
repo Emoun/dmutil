@@ -4,34 +4,19 @@ mod test_prefix{
 	/*
 	Tests that input can be followed by a macro call
 	*/
-	macro_rules ! test_macro{
-		( ! ! ) =>{
+	eager_macro_rules! {
+		test_macro $eager_1 $eager_2
+		{ ! ! } =>{
 			expand!{
 				struct
 				test_macro!{??}
 			}
 		};
-		( 	@expand[
-				[$($postfix:tt)*] $($expand_rest:tt)*
-			]
-			??
-		) =>{
-			check_expand!{
-				[$($expand_rest)*]
-				SomeName test_macro!{| |}
-				$($postfix)*
-			}
+		{ ?? } =>{
+			SomeName test_macro!{| |}
 		};
-		( 	@expand[
-				[$($postfix:tt)*] $($expand_rest:tt)*
-			]
-			| |
-		) =>{
-			check_expand!{
-				[$($expand_rest)*]
-				{field: u32}
-				$($postfix)*
-			}
+		{ | | } =>{
+			{field: u32}
 		};
 	}
 	test_macro!(!!);
@@ -375,7 +360,6 @@ mod paren_test_nested_calls{
 		assert_eq!(9, N);
 	}
 }
-
 
 
 
