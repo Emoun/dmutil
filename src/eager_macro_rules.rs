@@ -167,12 +167,12 @@ macro_rules! eager_macro_rules_internal{
 				{$($rules_grammar)*} => {$($rules_expansion)*};
 			)+
 			$(
-				// Then the expand supporting version
+				// Then the eager supporting version
 				{
-					@expand[[$dollar1($dollar1 $id_1:tt)*] $dollar2($dollar2 $id_2:tt)*]
+					@eager[[$dollar1($dollar1 $id_1:tt)*] $dollar2($dollar2 $id_2:tt)*]
 					$($rules_grammar)*
 				} => {
-					check_expand!{
+					check_eager!{
 						[$dollar2($dollar2$id_2)*]
 						$($rules_expansion)*
 						$dollar1($dollar1$id_1)*

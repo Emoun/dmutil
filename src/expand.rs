@@ -1,10 +1,10 @@
 
 #[macro_export]
-macro_rules! expand{
+macro_rules! eager{
 	(
 		$($all:tt)*
 	)=>{
-		expand_internal!{
+		eager_internal!{
 			@check_expansion[
 				[[][]]
 			]
@@ -14,12 +14,12 @@ macro_rules! expand{
 }
 
 #[macro_export]
-macro_rules! check_expand{
+macro_rules! check_eager{
 	(
 		[ $prefix:tt $($rest:tt)* ]
 		$($input:tt)*
 	)=>{
-		expand_internal!{
+		eager_internal!{
 			@check_expansion[
 				[$prefix []]
 				$($rest)*
@@ -31,7 +31,7 @@ macro_rules! check_expand{
 
 #[macro_export]
 #[doc(hidden)]
-macro_rules! expand_internal{
+macro_rules! eager_internal{
 	(	// If the next token is a block, check it (brace type)
 		@check_expansion[
 			[[$($prefix:tt)*][]]
@@ -39,7 +39,7 @@ macro_rules! expand_internal{
 		]
 		{$($body:tt)*} $($rest:tt)*
 	)=>{
-		expand_internal!{
+		eager_internal!{
 			@check_expansion[
 				[[][]]
 				[[$($prefix)*][$($rest)*]{}]
@@ -55,7 +55,7 @@ macro_rules! expand_internal{
 		]
 		($($body:tt)*) $($rest:tt)*
 	)=>{
-		expand_internal!{
+		eager_internal!{
 			@check_expansion[
 				[[][]]
 				[[$($prefix)*][$($rest)*]()]
@@ -72,7 +72,7 @@ macro_rules! expand_internal{
 		]
 		$next:tt $($rest:tt)*
 	)=>{
-		expand_internal!{
+		eager_internal!{
 			@check_expansion[
 				[[$next $($prefix)*][]]
 				$([$prefix_rest $postfix_rest $block_type])*
@@ -90,7 +90,7 @@ macro_rules! expand_internal{
 		]
 	)=>{
 		$macro_name!{
-			@expand[
+			@eager[
 				 [$($postfix)*] [$($prefix)*]
 				 $([$prefix_rest $postfix_rest $block_type])*
 			]
@@ -105,7 +105,7 @@ macro_rules! expand_internal{
 		]
 	)=>{
 		$macro_name!{
-			@expand[
+			@eager[
 				 [$($postfix)*] [$($prefix)*]
 				 $([$prefix_rest $postfix_rest $block_type])*
 			]
@@ -120,7 +120,7 @@ macro_rules! expand_internal{
 			$([$prefix_rest:tt $postfix_rest:tt $block_type:tt])*
 		]
 	)=>{
-		expand_internal!{
+		eager_internal!{
 			@check_expansion[
 				[[$($last_rest)*][]]
 				[$prefix $postfix {$last $($body)*}]
@@ -136,7 +136,7 @@ macro_rules! expand_internal{
 			$([$prefix_rest:tt $postfix_rest:tt $block_type:tt])*
 		]
 	)=>{
-		expand_internal!{
+		eager_internal!{
 			@check_expansion[
 				[[$($last_rest)*][]]
 				[$prefix $postfix ($last $($body)*)]
@@ -144,19 +144,6 @@ macro_rules! expand_internal{
 			]
 		}
 	};
-	/*(	// When there is no more input and the last block's body has been promoted
-		// remote it
-		@check_expansion[
-			[[][]$block_type_remove:tt]
-			$([$prefix_rest:tt $postfix_rest:tt $block_type:tt])*
-		]
-	)=>{
-		expand_internal!{
-			@check_expansion[
-				$([$prefix_rest $postfix_rest $block_type])*
-			]
-		}
-	};*/
 	(	// When all input has been promoted to the previous block
 		// remove the input catcher
 		@check_expansion[
@@ -164,7 +151,7 @@ macro_rules! expand_internal{
 			$([$prefix_rest:tt $postfix_rest:tt $block_type:tt])+
 		]
 	)=>{
-		expand_internal!{
+		eager_internal!{
 			@check_expansion[
 				$([$prefix_rest $postfix_rest $block_type])+
 			]
@@ -186,7 +173,7 @@ macro_rules! expand_internal{
 			$([$prefix_rest:tt $postfix_rest:tt $block_type_rest:tt])*
 		]
 	)=>{
-		expand_internal!{
+		eager_internal!{
 			@promote[
 				[[{} $($prefix)*][$($postfix)*]{$($body)*}]
 				$([$prefix_rest $postfix_rest $block_type_rest])*
@@ -201,7 +188,7 @@ macro_rules! expand_internal{
 			$([$prefix_rest:tt $postfix_rest:tt $block_type_rest:tt])*
 		]
 	)=>{
-		expand_internal!{
+		eager_internal!{
 			@promote[
 				[[() $($prefix)*][$($postfix)*]($($body)*)]
 				$([$prefix_rest $postfix_rest $block_type_rest])*
@@ -219,7 +206,7 @@ macro_rules! expand_internal{
 			$([$prefix_rest:tt $postfix_rest:tt $block_type_rest:tt])*
 		]
 	)=>{
-		expand_internal!{
+		eager_internal!{
 			@promote[
 				[[{$($other)* $next} $($prefix)*][$($postfix)*]{$($body)*}]
 				$([$prefix_rest $postfix_rest $block_type_rest])*
@@ -235,7 +222,7 @@ macro_rules! expand_internal{
 			$([$prefix_rest:tt $postfix_rest:tt $block_type_rest:tt])*
 		]
 	)=>{
-		expand_internal!{
+		eager_internal!{
 			@promote[
 				[[($($other)* $next) $($prefix)*][$($postfix)*]($($body)*)]
 				$([$prefix_rest $postfix_rest $block_type_rest])*
@@ -248,7 +235,7 @@ macro_rules! expand_internal{
 			$([$prefix_rest:tt $postfix_rest:tt $block_type_rest:tt])*
 		]
 	)=>{
-		expand_internal!{
+		eager_internal!{
 			@check_expansion[
 				[[$promoted $($prefix)*][]]
 				$([$prefix_rest $postfix_rest $block_type_rest])*
@@ -262,7 +249,7 @@ macro_rules! expand_internal{
 			$([$prefix_rest:tt $postfix_rest:tt $block_type_rest:tt])*
 		]
 	)=>{
-		expand_internal!{
+		eager_internal!{
 			@check_expansion[
 				[[$promoted $($prefix)*][]]
 				$([$prefix_rest $postfix_rest $block_type_rest])*

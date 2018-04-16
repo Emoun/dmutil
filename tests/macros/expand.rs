@@ -7,7 +7,7 @@ mod test_prefix{
 	eager_macro_rules! {
 		test_macro $eager_1 $eager_2
 		{ ! ! } =>{
-			expand!{
+			eager!{
 				struct
 				test_macro!{??}
 			}
@@ -27,31 +27,31 @@ mod test_postfix{
 	*/
 	macro_rules! test_macro{
 		(!!)=>{
-			expand!{
+			eager!{
 				struct
 				test_macro!{??}
 			}
 		};
 		(
-			@expand[
-				[$($postfix:tt)*] $($expand_rest:tt)*
+			@eager[
+				[$($postfix:tt)*] $($eager_rest:tt)*
 			]
 			??
 		)=>{
-			check_expand!{
-				[$($expand_rest)*]
+			check_eager!{
+				[$($eager_rest)*]
 				test_macro!{||}
 				{field: u32} $($postfix)*
 			}
 		};
 		(
-			@expand[
-				[$($postfix:tt)*] $($expand_rest:tt)*
+			@eager[
+				[$($postfix:tt)*] $($eager_rest:tt)*
 			]
 			||
 		)=>{
-			check_expand!{
-				[$($expand_rest)*]
+			check_eager!{
+				[$($eager_rest)*]
 				SomeStruct
 				$($postfix)*
 			}
@@ -66,13 +66,13 @@ mod test_multiple_calls{
 	use std::marker::PhantomData;
 	macro_rules! mac1{
 		{
-			@expand[
-				[$($postfix:tt)*] $($expand_rest:tt)*
+			@eager[
+				[$($postfix:tt)*] $($eager_rest:tt)*
 			]
 			$typ:tt
 		}=>{
-			check_expand!{
-				[$($expand_rest)*]
+			check_eager!{
+				[$($eager_rest)*]
 				$typ
 				$($postfix)*
 			}
@@ -80,7 +80,7 @@ mod test_multiple_calls{
 	}
 	macro_rules! mac2{
 		($V:ident,$eq:tt)=>{
-			expand!{
+			eager!{
 				struct $V<V,W> where W:
 				mac1!{$eq},
 				V:
@@ -99,13 +99,13 @@ mod test_nested_calls{
 	use std::marker::PhantomData;
 	macro_rules! mac1{
 		(
-			@expand[
-				[$($postfix:tt)*] $($expand_rest:tt)*
+			@eager[
+				[$($postfix:tt)*] $($eager_rest:tt)*
 			]
 			!!
 		)=>{
-			check_expand!{
-				[$($expand_rest)*]
+			check_eager!{
+				[$($eager_rest)*]
 				ph1: PhantomData<W>,ph2: PhantomData<V>
 				$($postfix)*
 			}
@@ -113,13 +113,13 @@ mod test_nested_calls{
 	}
 	macro_rules! mac2{
 		{
-			@expand[
-				[$($postfix:tt)*] $($expand_rest:tt)*
+			@eager[
+				[$($postfix:tt)*] $($eager_rest:tt)*
 			]
 			$($to_encapsulate:tt)*
 		}=>{
-			check_expand!{
-				[$($expand_rest)*]
+			check_eager!{
+				[$($eager_rest)*]
 				{$($to_encapsulate)*}
 				$($postfix)*
 			}
@@ -127,20 +127,20 @@ mod test_nested_calls{
 	}
 	macro_rules! mac3{
 		($some:ident)=>{
-			expand!{
+			eager!{
 				struct $some<V,W>
 				mac2!{
 					mac1!{mac3!{{SomeThing}}}
 				}
 			}
 		};
-		(	@expand[
-				[$($postfix:tt)*] $($expand_rest:tt)*
+		(	@eager[
+				[$($postfix:tt)*] $($eager_rest:tt)*
 			]
 			{SomeThing}
 		)=>{
-			check_expand!{
-				[$($expand_rest)*]
+			check_eager!{
+				[$($eager_rest)*]
 				!!
 				$($postfix)*
 			}
@@ -152,19 +152,19 @@ mod test_non_call_block_ignored{
 	
 	macro_rules! test_macro{
 		() => {
-			expand!{
+			eager!{
 				test_macro!{1}
 				{field: i32}
 				struct SomeSecondStruct{}
 			}
 		};
-		(	@expand[
-				[$($postfix:tt)*] $($expand_rest:tt)*
+		(	@eager[
+				[$($postfix:tt)*] $($eager_rest:tt)*
 			]
 			1
 		) => {
-			check_expand!{
-				[$($expand_rest)*]
+			check_eager!{
+				[$($eager_rest)*]
 				struct SomeStruct
 				$($postfix)*
 			}
@@ -180,40 +180,40 @@ mod paren_test_prefix{
 	*/
 	macro_rules ! test_macro{
 		(!! ) =>{
-			expand!{
+			eager!{
 				const N: i32 = test_macro!(1);
 				
 			}
 		};
-		( 	@expand[
-				[$($postfix:tt)*] $($expand_rest:tt)*
+		( 	@eager[
+				[$($postfix:tt)*] $($eager_rest:tt)*
 			]
 			1
 		) =>{
-			check_expand!{
-				[$($expand_rest)*]
+			check_eager!{
+				[$($eager_rest)*]
 				(5+5) test_macro!(2)
 				$($postfix)*
 			}
 		};
-		( 	@expand[
-				[$($postfix:tt)*] $($expand_rest:tt)*
+		( 	@eager[
+				[$($postfix:tt)*] $($eager_rest:tt)*
 			]
 			2
 		) =>{
-			check_expand!{
-				[$($expand_rest)*]
+			check_eager!{
+				[$($eager_rest)*]
 				+ 1 test_macro!(3)
 				$($postfix)*
 			}
 		};
-		( 	@expand[
-				[$($postfix:tt)*] $($expand_rest:tt)*
+		( 	@eager[
+				[$($postfix:tt)*] $($eager_rest:tt)*
 			]
 			3
 		) =>{
-			check_expand!{
-				[$($expand_rest)*]
+			check_eager!{
+				[$($eager_rest)*]
 				+ (5)
 				$($postfix)*
 			}
@@ -231,40 +231,40 @@ mod paren_test_postfix{
 	*/
 	macro_rules ! test_macro{
 		(!! ) =>{
-			expand!{
+			eager!{
 				const N: i32 = test_macro!(1);
 				
 			}
 		};
-		( 	@expand[
-				[$($postfix:tt)*] $($expand_rest:tt)*
+		( 	@eager[
+				[$($postfix:tt)*] $($eager_rest:tt)*
 			]
 			1
 		) =>{
-			check_expand!{
-				[$($expand_rest)*]
+			check_eager!{
+				[$($eager_rest)*]
 				test_macro!(2) (5+5)
 				$($postfix)*
 			}
 		};
-		( 	@expand[
-				[$($postfix:tt)*] $($expand_rest:tt)*
+		( 	@eager[
+				[$($postfix:tt)*] $($eager_rest:tt)*
 			]
 			2
 		) =>{
-			check_expand!{
-				[$($expand_rest)*]
+			check_eager!{
+				[$($eager_rest)*]
 				test_macro!(3) 1 +
 				$($postfix)*
 			}
 		};
-		( 	@expand[
-				[$($postfix:tt)*] $($expand_rest:tt)*
+		( 	@eager[
+				[$($postfix:tt)*] $($eager_rest:tt)*
 			]
 			3
 		) =>{
-			check_expand!{
-				[$($expand_rest)*]
+			check_eager!{
+				[$($eager_rest)*]
 				(5) +
 				$($postfix)*
 			}
@@ -282,18 +282,18 @@ mod paren_test_multiple_calls{
 	*/
 	macro_rules ! test_macro{
 		(!! ) =>{
-			expand!{
+			eager!{
 				const N: i32 = test_macro!(1) + test_macro!(1) + test_macro!(1);
 				
 			}
 		};
-		( 	@expand[
-				[$($postfix:tt)*] $($expand_rest:tt)*
+		( 	@eager[
+				[$($postfix:tt)*] $($eager_rest:tt)*
 			]
 			1
 		) =>{
-			check_expand!{
-				[$($expand_rest)*]
+			check_eager!{
+				[$($eager_rest)*]
 				(5+5)
 				$($postfix)*
 			}
@@ -311,44 +311,44 @@ mod paren_test_nested_calls{
 	*/
 	macro_rules ! test_macro_1 {
 		(!!) =>{
-			expand!{
+			eager!{
 				const N: i32 = test_macro_2!(test_macro_3!(test_macro_4!()));
 			}
 		};
 	}
 	macro_rules! test_macro_2 {
-		( 	@expand[
-				[$($postfix:tt)*] $($expand_rest:tt)*
+		( 	@eager[
+				[$($postfix:tt)*] $($eager_rest:tt)*
 			]
 			$($all:tt)*
 		) =>{
-			check_expand!{
-				[$($expand_rest)*]
+			check_eager!{
+				[$($eager_rest)*]
 				($($all)*) + 2
 				$($postfix)*
 			}
 		};
 	}
 	macro_rules! test_macro_3{
-		( 	@expand[
-				[$($postfix:tt)*] $($expand_rest:tt)*
+		( 	@eager[
+				[$($postfix:tt)*] $($eager_rest:tt)*
 			]
 			$($all:tt)*
 		) =>{
-			check_expand!{
-				[$($expand_rest)*]
+			check_eager!{
+				[$($eager_rest)*]
 				1 + ($($all)*) + 2
 				$($postfix)*
 			}
 		};
 	}
 	macro_rules! test_macro_4{
-		( 	@expand[
-				[$($postfix:tt)*] $($expand_rest:tt)*
+		( 	@eager[
+				[$($postfix:tt)*] $($eager_rest:tt)*
 			]
 		) =>{
-			check_expand!{
-				[$($expand_rest)*]
+			check_eager!{
+				[$($eager_rest)*]
 				4
 				$($postfix)*
 			}

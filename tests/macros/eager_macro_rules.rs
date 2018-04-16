@@ -37,8 +37,8 @@ mod test_produces_eager_macro{
 	eager_macro_rules!{
 		test_macro $eager_var_1 $eager_var_2
 		{1} => { + 1 };
-		{2} => {expand!{1 test_macro!(1)}};
-		{3} => {expand!{1 test_macro!(1) test_macro!(1)}};
+		{2} => {eager!{1 test_macro!(1)}};
+		{3} => {eager!{1 test_macro!(1) test_macro!(1)}};
 		{4} => {test_macro!(2) + test_macro!(2)};
 	}
 	#[test]
