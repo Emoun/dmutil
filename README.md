@@ -1,5 +1,8 @@
 
 # dmutil
+[![Build Status](https://travis-ci.org/Emoun/dmutil.svg?branch=master)](https://travis-ci.org/Emoun/dmutil)
+[![](http://meritbadge.herokuapp.com/dmutil)](https://crates.io/crates/dmutil)
+[![](https://docs.rs/dmutil/badge.svg)](https://docs.rs/dmutil)
 
 A collection of macros to help with the creation of other macros. Most notably, includes the `eager!` macro, which
 enables eager expansion of macros.
