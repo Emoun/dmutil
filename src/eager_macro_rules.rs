@@ -13,13 +13,13 @@
 /// # `eager!`-enabling
 ///
 /// To [eager!](macro.eager.html)-enable the following macro:
-/// ```
+/// ```ignore
 /// macro_rules! some_macro{
 /// 	...
 /// }
 /// ```
 /// The whole above declaration must be changed to:
-/// ```
+/// ```ignore
 /// eager_macro_rules! {
 /// 	some_macro $eager_1 $eager2
 /// 	...

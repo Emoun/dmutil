@@ -130,7 +130,7 @@
 /// extern crate dmutil;
 ///
 /// eager_macro_rules!{
-///     some_struct $eager_1 $eager_2
+///     id $eager_1 $eager_2
 ///     ()=> {SomeStruct}
 /// }
 ///
@@ -138,7 +138,10 @@
 ///     some_struct $eager_1 $eager_2
 ///     ()=>{struct id!(){}}
 /// }
-/// some_struct!{}
+///
+/// eager!{some_struct!{}}
+///
+/// fn main(){}
 /// ```
 ///
 /// # Trivia
