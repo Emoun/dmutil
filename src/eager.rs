@@ -64,6 +64,38 @@ macro_rules! eager_internal{
 			$($body)*
 		}
 	};
+	(	// If the next token is a n 'eager!' macro call, ignore it,
+		// extracting the body. (brace type)
+		@check_expansion[
+			[[$($prefix:tt)*][]]
+			$([$prefix_rest:tt $postfix_rest:tt $block_type:tt])*
+		]
+		eager!{$($body:tt)*} $($rest:tt)*
+	)=>{
+		eager_internal!{
+			@check_expansion[
+				[[$($prefix)*][]]
+				$([$prefix_rest $postfix_rest $block_type])*
+			]
+			$($body)* $($rest)*
+		}
+	};
+	(	// If the next token is a n 'eager!' macro call, ignore it,
+		// extracting the body. (brace type)
+		@check_expansion[
+			[[$($prefix:tt)*][]]
+			$([$prefix_rest:tt $postfix_rest:tt $block_type:tt])*
+		]
+		eager!($($body:tt)*) $($rest:tt)*
+	)=>{
+		eager_internal!{
+			@check_expansion[
+				[[$($prefix)*][]]
+				$([$prefix_rest $postfix_rest $block_type])*
+			]
+			$($body)* $($rest)*
+		}
+	};
 	(	// If the next token isn't any of the above
 		// it is safe to add it to the prefix
 		@check_expansion[
@@ -81,7 +113,7 @@ macro_rules! eager_internal{
 		}
 	};
 	
-// Done ready input
+// Done decoding input
 	(	// When there is no more input and the last input was a macro call
 		// (brace type)
 		@check_expansion[

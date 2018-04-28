@@ -108,7 +108,10 @@ mod test_nested_calls{
 	mac3!{SomeStruct}
 }
 mod test_non_call_block_ignored{
-	
+	/*
+	Tests that a block that is not part of a macro call is left as is.
+	(Assuming there is no macro call in it).
+	*/
 	eager_macro_rules! {
 		test_macro $eager_1 $eager_2
 		() => {
@@ -124,6 +127,28 @@ mod test_non_call_block_ignored{
 	}
 	test_macro!{}
 }
+mod test_nested_eagers{
+	/*
+	Tests that using the eager! macro inside the body of another eager! call
+	does nothing.
+	*/
+	eager_macro_rules! {
+		test_macro $eager_1 $eager_2
+		() => {
+			eager!{
+				eager!{
+					test_macro!{1}
+				}
+			}
+		};
+		( 1 ) => {
+			struct SomeStruct{}
+		};
+	}
+	test_macro!{}
+}
+
+
 
 // Same tests as above, but with the '()' block type
 mod paren_test_prefix{
@@ -236,7 +261,50 @@ mod paren_test_nested_calls{
 		assert_eq!(9, N);
 	}
 }
-
+mod paren_test_non_call_block_ignored{
+	
+	eager_macro_rules! {
+		test_macro $eager_1 $eager_2
+		() => {
+			eager!{
+				test_macro!(1)
+				(4 + 4)
+				 + 4
+			}
+		};
+		( 1 ) => {
+			4 +
+		};
+	}
+	#[test]
+	fn test(){
+		assert_eq!(16, test_macro!());
+	}
+}
+mod paren_test_nested_eagers{
+	/*
+	Tests that using the eager! macro inside the body of another eager! call
+	does nothing.
+	*/
+	eager_macro_rules! {
+		test_macro $eager_1 $eager_2
+		() => {
+			eager!(
+				1
+				eager!(
+					test_macro!(1)
+				)
+			)
+		};
+		( 1 ) => {
+			+ 2
+		};
+	}
+	#[test]
+	fn test(){
+		assert_eq!(3, test_macro!());
+	}
+}
 
 
 
