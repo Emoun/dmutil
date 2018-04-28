@@ -1,3 +1,6 @@
+//!
+//! A collection of macros to ease the creation of other macros.
+//!
 
 #[macro_use]
 mod reverse;

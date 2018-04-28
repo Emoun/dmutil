@@ -1,4 +1,152 @@
-
+///
+/// Emulates eager expansion of macros.
+///
+/// # Example
+/// ```
+/// #[macro_use]
+/// extern crate dmutil;
+///
+/// eager_macro_rules!{
+///     plus_1 $eager_1 $eager_2
+///     ()=>{
+///         + 1
+///     };
+/// }
+///
+/// fn main(){
+/// 	assert_eq!(4, eager!{2 plus_1!() plus_1!()});
+/// }
+/// ```
+///
+/// # Usage
+///
+/// `eager!` can wrap any code, and if that code contains a macro call, that macro will be
+/// expanded before its consumer. This means:
+///
+/// * If a macro call is given as an argument to another macro, the first macro will be expanded
+/// first.
+/// * All macros will be fully expanded before `eager!` expands, meaning otherwise illegal
+/// intermediate expansion steps can be made possible.
+///
+/// `eager!` does not work with any macro. Only macros declared using [eager_macro_rules!] may be
+/// used inside `eager!`. Such macros are said to be `eager!`-enabled.
+///
+/// [eager_macro_rules!]: macro.eager_macro_rules.html
+///
+/// # Cons
+///
+/// * Because of the way `eager!` is implemented; being a hack of recursive macroes, the compiler's
+/// default macro recursion limit is quickly exceeded. Therefore, `#![recursion_limit="256"]`
+/// must be used in most situations (potentially with a higher limit)
+/// such that expansion can happen.
+///
+/// * Debugging an eagerly expanded macro is very difficult and requires intimate knowledge
+/// of the implementation of `eager!`. There is no way to mitigate this, except to try and
+/// recreate the bug without using `eager!`. Likewise, the error messages the compiler will
+/// emit are exponentially more cryptic than they already would have been.
+///
+/// * Only works with `eager!`-enabled macros. Additionally, none of the macros may
+/// expand to something containing a non-`eager!`-enabled macro, not even as an intermediate
+/// expansion.
+///
+/// ---
+/// # Macro expansions
+///
+/// Rust is lazy when it comes to macro expansion. When the compiler sees a macro call, it will
+/// try to expand the macro without looking at its arguments or what the expansion becomes.
+/// Using `eager!`, previously illegal macro expansions can be made possible.
+///
+/// ## Macro restrictions
+/// This puts a few restrictions on what can and cannot be done with macros:
+///
+/// ### The arguments to a macro usually cannot be the resulting expansion of another macro call:
+/// Say you have a macro that adds two numbers:
+/// ```ignore
+/// macro_rules! add{
+///     ($e1:expr, $e2:expr)=> {$e1 + $e2}
+/// }
+/// ```
+/// And a macro that expands to two comma-separated numbers:
+///
+/// ```ignore
+/// macro_rules! two{
+///     ()=>{2,3}
+/// }
+/// ```
+///
+/// You cannot use the expansion of `two!` as an argument to `add!`:
+/// ```ignore
+/// let x = add!(two!()); // error
+/// ```
+/// The compiler will complain about no rule in `add!` accepting `two`, since `two!()` does not
+/// get expanded before the `add!` who requires two expression and not just one.
+///
+/// With eager expansion, this can be made possible:
+/// ```
+/// #[macro_use]
+/// extern crate dmutil;
+///
+/// eager_macro_rules!{
+///     add $eager_1 $eager_2
+///     ($e1:expr, $e2:expr)=> {$e1 + $e2}
+/// }
+///
+/// eager_macro_rules!{
+///     two $eager_1 $eager_2
+///     ()=>{2,3}
+/// }
+///
+/// fn main(){
+/// 	let x = eager!{add!(two!())};
+/// 	assert_eq!(5, x);
+/// }
+/// ```
+///
+/// ### An intermediate expansion step cannot result in invalid syntax
+///
+/// Say you have a macro that expands to an identifier:
+/// ```ignore
+/// macro_rules! id{
+///     ()=> {SomeStruct}
+/// }
+/// ```
+/// And want a macro that, using the previous macro, expands to a struct declaration:
+/// ```ignore
+/// macro_rules! some_struct{
+///     ()=> {struct id!(){}}
+/// }
+/// ```
+/// Calling this macro will not compile. Looking at the result of the first expansion
+/// step we can see why:
+/// ```ignore
+/// struct id!() {}
+/// ```
+/// Since macro calls are illegal in identifier positions, the compiler will refuse to continue
+/// expanding.
+///
+///  With eager expansion, this can be made possible:
+/// ```
+/// #[macro_use]
+/// extern crate dmutil;
+///
+/// eager_macro_rules!{
+///     some_struct $eager_1 $eager_2
+///     ()=> {SomeStruct}
+/// }
+///
+/// eager_macro_rules!{
+///     some_struct $eager_1 $eager_2
+///     ()=>{struct id!(){}}
+/// }
+/// some_struct!{}
+/// ```
+///
+/// # Trivia
+///
+/// Ironically, `eager!` is not itself `eager!`-enabled,
+/// though it does ignore itself if it is nested.
+///
+///
 #[macro_export]
 macro_rules! eager{
 	(
@@ -14,9 +162,10 @@ macro_rules! eager{
 }
 
 #[macro_export]
-macro_rules! check_eager{
-	(
-		[ $prefix:tt $($rest:tt)* ]
+#[doc(hidden)]
+macro_rules! eager_internal{
+	(	// From macro expansion
+		@from_macro[ $prefix:tt $($rest:tt)* ]
 		$($input:tt)*
 	)=>{
 		eager_internal!{
@@ -27,11 +176,7 @@ macro_rules! check_eager{
 			$($input)*
 		}
 	};
-}
-
-#[macro_export]
-#[doc(hidden)]
-macro_rules! eager_internal{
+// Decode input stream
 	(	// If the next token is a block, check it (brace type)
 		@check_expansion[
 			[[$($prefix:tt)*][]]

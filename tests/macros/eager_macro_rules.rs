@@ -67,7 +67,7 @@ mod test_eager_vs_non_eager_expansion_order{
 		<and then the eager version>
 	}
 	
-	In this case eager! work work because when it call the macro (mac1) the pure
+	In this case eager! would not work because when it calls the macro (mac1), the pure
 	rule will match the initial '@eager', which is not intended.
 	*/
 	

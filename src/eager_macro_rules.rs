@@ -1,4 +1,34 @@
 
+///
+/// Declares an [eager!](macro.eager.html)-enabled macro.
+///
+/// # Usage
+///
+/// Works exactly as `macro_rules!`, except the following difference:
+///
+/// * The name of the macro to be declared is given in the body as the first token.
+/// * Two identifiers must be given after the name of the macro. Each must be preceded by
+/// a '$' sign, and must not collide with any macro variable name used in any rule.
+///
+/// # `eager!`-enabling
+///
+/// To [eager!](macro.eager.html)-enable the following macro:
+/// ```
+/// macro_rules! some_macro{
+/// 	...
+/// }
+/// ```
+/// The whole above declaration must be changed to:
+/// ```
+/// eager_macro_rules! {
+/// 	some_macro $eager_1 $eager2
+/// 	...
+/// }
+/// ```
+/// where `...` is the list of rules that comprise the macro, and no macro variable is called
+/// `$eager_1` or `$eager_2`. Additionally, no rule should accept `@eager`, as this could conflict
+/// with the implementation of `eager!`.
+///
 #[macro_export]
 macro_rules! eager_macro_rules{
 
@@ -168,8 +198,8 @@ macro_rules! eager_macro_rules_internal{
 					@eager[[$dollar1($dollar1 $id_1:tt)*] $dollar2($dollar2 $id_2:tt)*]
 					$($rules_grammar)*
 				} => {
-					check_eager!{
-						[$dollar2($dollar2$id_2)*]
+					eager_internal!{
+						@from_macro[$dollar2($dollar2$id_2)*]
 						$($rules_expansion)*
 						$dollar1($dollar1$id_1)*
 					}

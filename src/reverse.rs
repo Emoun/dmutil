@@ -1,6 +1,6 @@
 
 ///
-/// A macro to reverse a stream of token trees (tt).
+/// Reverses a stream of token trees (tt).
 ///
 /// Given a set of token trees in brackets `[1 2 3]`it will reverse their order and remove
 /// the brackets: `3 2 1`. Chaining is also possible; the first group
