@@ -1,6 +1,15 @@
 [package]
 name = "dmutil"
 version = "0.1.0"
-authors = ["Emad"]
+authors = ["Emad Jacob Maroun <emoun.open@gmail.com>"]
+
+license = "MIT"
+
+readme = "README.md"
+
+repository = "https://github.com/Emoun/dmutil"
+
+keywords = ["macro","eager", "expansion", "utilities"]
+categories = ["rust-patterns","no-std"]
 
 [dependencies]
