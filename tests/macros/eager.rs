@@ -136,19 +136,38 @@ mod test_nested_eagers{
 		test_macro $eager_1 $eager_2
 		() => {
 			eager!{
+				struct
 				eager!{
 					test_macro!{1}
 				}
+				{}
 			}
 		};
 		( 1 ) => {
-			struct SomeStruct{}
+			 SomeStruct
 		};
 	}
 	test_macro!{}
 }
-
-
+mod test_recursive_eagers{
+	/*
+	Tests that if an expansion creates a new 'eager!' call, it is ignored.
+	*/
+	eager_macro_rules! {
+		test_macro $eager_1 $eager_2
+		() => {
+			eager!{
+				struct
+				test_macro!{1}
+				{}
+			}
+		};
+		( 1 ) => {
+			eager!{SomeStruct}
+		};
+	}
+	test_macro!{}
+}
 
 // Same tests as above, but with the '()' block type
 mod paren_test_prefix{
@@ -305,6 +324,25 @@ mod paren_test_nested_eagers{
 		assert_eq!(3, test_macro!());
 	}
 }
-
+mod pare_test_recursive_eagers{
+	/*
+	Tests that if an expansion creates a new 'eager!' call, it is ignored.
+	*/
+	eager_macro_rules! {
+		test_macro $eager_1 $eager_2
+		() => {
+			eager!(
+				1 test_macro!(1)
+			)
+		};
+		( 1 ) => {
+			eager!(+ 2)
+		};
+	}
+	#[test]
+	fn test(){
+		assert_eq!(3, test_macro!());
+	}
+}
 
 

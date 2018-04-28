@@ -53,9 +53,9 @@ mod test_produces_eager_macro{
 mod test_eager_vs_non_eager_expansion_order{
 	/*
 	Test that the expanded macro has the eager versions of each rule first.
-	This is required because the other way around may create uncallable
-	macros.
-	For example, if 'mac1' below is expanden to:
+	This is required because the other way around may result in the eager
+	calls not using the correct rule.
+	For example, if 'mac1' below is expanded to:
 	
 	macro_rules! mac1{
 		{
@@ -67,13 +67,8 @@ mod test_eager_vs_non_eager_expansion_order{
 		<and then the eager version>
 	}
 	
-	The compiler will complain:
-	
-	error: macro expansion ignores token `{` and any following
-	  --> tests\macros\eager.rs:89:4
-	   |
-	89 |             {$($to_encapsulate)*}
-	
+	In this case eager! work work because when it call the macro (mac1) the pure
+	rule will match the initial '@eager', which is not intended.
 	*/
 	
 	eager_macro_rules! {

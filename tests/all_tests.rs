@@ -4,6 +4,3 @@
 extern crate dmutil;
 
 mod macros;
-
-
-

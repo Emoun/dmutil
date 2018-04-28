@@ -177,9 +177,9 @@ macro_rules! eager_macro_rules_internal{
 			)+
 			
 			$(
-				// Then the pure version, this is because some pure
-				// versions will throw errors when they come before their
-				// eager version. (e.g. if the rule expands to a block and nothing else).
+				// Then the pure version. We put the pure versions
+				// last such that if it contains a '$($all:tt)*' rule,
+				// the pure version will not catch an eager call.
 				{$($rules_grammar)*} => {$($rules_expansion)*};
 			)+
 		}
