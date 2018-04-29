@@ -8,5 +8,6 @@ mod eager_macro_rules;
 mod reverse;
 #[macro_use]
 mod eager;
-
+#[macro_use]
+mod lazy;
 

@@ -168,6 +168,42 @@ mod test_recursive_eagers{
 	}
 	test_macro!{}
 }
+mod test_sequencial_blocks_arent_merged{
+	/*
+	Test that if two block are immediately after each other, they are not merged into one block.
+	*/
+	eager_macro_rules!{
+		test_macro $eager_1 $eager2
+		({1}{2}) => {"Success"};
+		({1 2}) => {"Failure"};
+	}
+	#[test]
+	fn test(){
+		assert_eq!("Success", eager!{test_macro!({1}{2})});
+	}
+}
+mod test_block_before_macro_isnt_merged_with_expansion{
+	/*
+	Test that if there is a block before a macro call, whos expansion result starts
+	with the same block type, that these two blocks arent merged after the macro is expanded.
+	I.e. ' {1} some_macro!()' becomes '{1}{2}' and not '{1 2}'.
+	*/
+	eager_macro_rules!{
+		test_macro $eager_1 $eager2
+		({1}{2}) => {"Success"};
+		({1 2}) => {"Failure"};
+		() => {{2}}
+	}
+	#[test]
+	fn test(){
+		assert_eq!("Success", eager!{
+			test_macro!{
+				{1}
+				test_macro!()
+			}
+		});
+	}
+}
 
 // Same tests as above, but with the '()' block type
 mod paren_test_prefix{

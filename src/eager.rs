@@ -28,16 +28,26 @@
 /// * All macros will be fully expanded before `eager!` expands, meaning otherwise illegal
 /// intermediate expansion steps can be made possible.
 ///
-/// `eager!` does not work with any macro. Only macros declared using [eager_macro_rules!] may be
-/// used inside `eager!`. Such macros are said to be `eager!`-enabled.
+/// `eager!` does not work with any macro; only macros declared using [`eager_macro_rules!`] may be
+/// used. Such macros are said to be `eager!`-enabled.
 ///
-/// [eager_macro_rules!]: macro.eager_macro_rules.html
+/// To enable the use of non-`eager!`-enabled macros inside an `eager!` call,
+/// a `lazy!` block can be inserted. Everything inside the `lazy!` block will be lazily expanded,
+/// while everything outside it will continue to be eagerly expanded. Since, `lazy!` reverts
+/// to the usual rules for macro expansion, and `eager!` block can be inserted inside the `lazy!`
+/// block, to re-enable eager expansion for some subset of it.
 ///
+/// __Note:__ A [`lazy!`] macro is provided with this crate only to mitigate name collisions.
+/// The macro does not do anything if called outside an `eager!` block.
+/// It will actually refuse to compile, emitting a message explaining the same.
+///
+/// [`eager_macro_rules!`]: macro.eager_macro_rules.html
+/// [`lazy!`]: macro.lazy.html
 /// # Cons
 ///
-/// * Because of the way `eager!` is implemented; being a hack of recursive macroes, the compiler's
+/// * Because of the way `eager!` is implemented - being a hack of recursive macros - the compiler's
 /// default macro recursion limit is quickly exceeded. Therefore, `#![recursion_limit="256"]`
-/// must be used in most situations (potentially with a higher limit)
+/// must be used in most situations - potentially with a higher limit -
 /// such that expansion can happen.
 ///
 /// * Debugging an eagerly expanded macro is very difficult and requires intimate knowledge
@@ -45,19 +55,18 @@
 /// recreate the bug without using `eager!`. Likewise, the error messages the compiler will
 /// emit are exponentially more cryptic than they already would have been.
 ///
-/// * Only works with `eager!`-enabled macros. Additionally, none of the macros may
-/// expand to something containing a non-`eager!`-enabled macro, not even as an intermediate
-/// expansion.
+/// * It can only eagerly expand `eager!`-enabled macros, so existing macros cannot be used
+/// in new ways. The `lazy!` block alleviates this a bit,
+/// by allowing the use of existing macros in it, while eager expansion can be done around them.
+/// Luckily, `eager!`-enabling an existing macro should not be too much
+/// trouble using [`eager_macro_rules!`].
 ///
 /// ---
 /// # Macro expansions
 ///
 /// Rust is lazy when it comes to macro expansion. When the compiler sees a macro call, it will
 /// try to expand the macro without looking at its arguments or what the expansion becomes.
-/// Using `eager!`, previously illegal macro expansions can be made possible.
-///
-/// ## Macro restrictions
-/// This puts a few restrictions on what can and cannot be done with macros:
+/// Using `eager!`, previously illegal macro expansions can be made possible:
 ///
 /// ### The arguments to a macro usually cannot be the resulting expansion of another macro call:
 /// Say you have a macro that adds two numbers:
@@ -69,7 +78,7 @@
 /// And a macro that expands to two comma-separated numbers:
 ///
 /// ```ignore
-/// macro_rules! two{
+/// macro_rules! two_and_three{
 ///     ()=>{2,3}
 /// }
 /// ```
@@ -92,17 +101,17 @@
 /// }
 ///
 /// eager_macro_rules!{
-///     two $eager_1 $eager_2
+///     two_and_three $eager_1 $eager_2
 ///     ()=>{2,3}
 /// }
 ///
 /// fn main(){
-/// 	let x = eager!{add!(two!())};
+/// 	let x = eager!{add!(two_and_three!())};
 /// 	assert_eq!(5, x);
 /// }
 /// ```
 ///
-/// ### An intermediate expansion step cannot result in invalid syntax
+/// ### Macros are illegal in some contexts (e.g. as an identifier)
 ///
 /// Say you have a macro that expands to an identifier:
 /// ```ignore
@@ -110,21 +119,17 @@
 ///     ()=> {SomeStruct}
 /// }
 /// ```
-/// And want a macro that, using the previous macro, expands to a struct declaration:
+/// And want to use it to declare a struct:
 /// ```ignore
-/// macro_rules! some_struct{
-///     ()=> {struct id!(){}}
-/// }
+/// struct id!()
+/// {}
 /// ```
-/// Calling this macro will not compile. Looking at the result of the first expansion
-/// step we can see why:
-/// ```ignore
-/// struct id!() {}
-/// ```
-/// Since macro calls are illegal in identifier positions, the compiler will refuse to continue
-/// expanding.
 ///
-///  With eager expansion, this can be made possible:
+/// This will not compile since macros are illegal in identifier position, and the compiler does
+/// not check whether the expansion of the macro will result in valid Rust code.
+///
+/// With eager expansion, `id!` will expand before the `eager!` block , making it possible to use it
+/// in an identifier position:
 /// ```
 /// #[macro_use]
 /// extern crate dmutil;
@@ -134,20 +139,132 @@
 ///     ()=> {SomeStruct}
 /// }
 ///
-/// eager_macro_rules!{
-///     some_struct $eager_1 $eager_2
-///     ()=>{struct id!(){}}
+/// eager!{
+///     struct id!(){
+///         v: u32
+///     }
 /// }
 ///
-/// eager!{some_struct!{}}
-///
-/// fn main(){}
+/// fn main(){
+/// 	let some_struct = SomeStruct{v: 4};
+///     assert_eq!(4, some_struct.v);
+/// }
 /// ```
+/// To circumvent any restriction on where macros can be used, we can therefore just wrap
+/// the code surrounding the macro call with `eager!`. `eager!` must still be in a valid position,
+/// but in the worst case it can be put around the whole item
+/// (struct, trait, implement, function, etc.).
+///
+///
+/// ### No intermediate expansion step can include invalid syntax
+///
+/// Say we want to create a macro that interprets words, converting them into an expression.
+/// We start by declaring a macro that interprets operators:
+/// ```ignore
+/// macro_rules! op{
+///     ( plus ) => { + };
+///     ( minus ) => { - };
+/// }
+/// ```
+///
+/// We then declare a macro that interprets integers from words:
+/// ```ignore
+/// macro_rules! integer{
+///     ( one ) => { 1 };
+///     ( two ) => { 2 };
+/// }
+/// ```
+///
+/// Lastly, we declare the top-level macro that uses the previous two macros to
+/// expand into an expression:
+/// ```ignore
+/// macro_rules! calculate{
+///     ( $lhs:tt $op:tt $rhs:tt ) => {
+///          integer!{$lhs} op!{$op} integer!{$rhs}
+///     };
+/// }
+/// ```
+///
+/// Using this macro will not compile:
+/// ```ignore
+/// let x = calculate!(one plus two); //Error
+/// ```
+///
+/// Looking at the first expansion step:
+/// ```ignore
+/// let x = integer!(one) op!{plus} integer!(two); //Error
+/// ```
+/// We can see that three macro calls in a sequence are not a valid expression.
+///
+/// We can use `eager!` to circumvent this restriction, by having `calculate!` expand
+/// into an `eager!` block:
+///
+/// ```
+/// #[macro_use]
+/// extern crate dmutil;
+///
+/// eager_macro_rules! {
+///     op $eager_1 $eager_2
+///     ( plus ) => { + };
+///     ( minus ) => { - };
+/// }
+/// eager_macro_rules! {
+///     integer $eager_1 $eager_2
+///     ( one ) => { 1 };
+///     ( two ) => { 2 };
+/// }
+/// eager_macro_rules! {
+///     calculate $eager_1 $eager_2
+///     ( $lhs:tt $op:tt $rhs:tt ) => {
+///          eager!{integer!{$lhs} op!{$op} integer!{$rhs}}
+///     };
+/// }
+///
+/// fn main(){
+/// 	let x = calculate!(one plus two);
+/// 	assert_eq!(3, x);
+/// }
+/// ```
+/// In this case, `calculate!` does not actually have to be `eager!`-enabled, since it is not inserted
+/// into an `eager!` block. Though - as per the [conventions](#conventions) - we do enable it such
+/// that others may later use it inside an `eager!` block.
+///
+///
+/// # Conventions
+///
+/// Since we expect the use of this macro to be broadly applicable, we propose the following
+/// conventions for the Rust community to use, to ease interoperability.
+///
+/// ## Documentation
+///
+/// To make it clearly visible that a given macro is `eager!`-enabled, its short rustdoc description
+/// must start with a pair of brackets, within which a link to the official `eager!` macro documentation
+/// must be provided. The link's visible text must be 'eager!' and
+/// the brackets must not be part of the link.
+///
+/// See the [`reverse_tt!`](macro.reverse_tt.html) documentation for an example.
+///
+/// ## Auxiliary variables
+///
+/// The two auxiliary variables that must always be provided to `eager_macro_rules!`
+/// must use the identifiers `eager_1` and `eager_2`, in that order. This makes it easier for everyone to
+/// get used to their presence and ignore them. By having them be the same in every project,
+/// no one has to think about why a given project uses some specific identifiers.
+///
+///
 ///
 /// # Trivia
 ///
-/// Ironically, `eager!` is not itself `eager!`-enabled,
-/// though it does ignore itself if it is nested.
+/// * Ironically, `eager!` is not technically `eager!`-enabled. Instead, it ignores itself if
+/// it is nested or a macro expands into an `eager!` block.
+/// Likewise, `eager_macro_rules!` is not `eager!`-enabled, though this might be possible.
+///
+/// * `eager_macro_rules!`'s two auxiliary variables are affectionately called `Simon & Garkel`,
+/// `eager_1` being `Simon` and `eager_2` being `Garkel`. These nicknames should probably not be
+/// used as identifiers in production code. Before reaching production, though...
+///
+/// * It requires continuous effort from [Emoun](http://github.com/Emoun) to not
+/// forcibly rename `eager_macro_rules!` to `eager_macros_rule`.
 ///
 ///
 #[macro_export]
@@ -212,7 +329,7 @@ macro_rules! eager_internal{
 			$($body)*
 		}
 	};
-	(	// If the next token is a n 'eager!' macro call, ignore it,
+	(	// If the next token is an 'eager!' macro call, ignore it,
 		// extracting the body. (brace type)
 		@check_expansion[
 			[[$($prefix:tt)*][]]
@@ -228,8 +345,8 @@ macro_rules! eager_internal{
 			$($body)* $($rest)*
 		}
 	};
-	(	// If the next token is a n 'eager!' macro call, ignore it,
-		// extracting the body. (brace type)
+	(	// If the next token is an 'eager!' macro call, ignore it,
+		// extracting the body. (parenthesis type)
 		@check_expansion[
 			[[$($prefix:tt)*][]]
 			$([$prefix_rest:tt $postfix_rest:tt $block_type:tt])*
@@ -242,6 +359,70 @@ macro_rules! eager_internal{
 				$([$prefix_rest $postfix_rest $block_type])*
 			]
 			$($body)* $($rest)*
+		}
+	};
+	(	// If the next token is a 'lazy!' macro call, ignore it,
+		// extracting its body (one at a time) such that it does not get eagerly expanded.
+		// (brace type)
+		@check_expansion[
+			[[$($prefix:tt)*][]]
+			$([$prefix_rest:tt $postfix_rest:tt $block_type:tt])*
+		]
+		lazy!{$body_first:tt $($body_rest:tt)*} $($rest:tt)*
+	)=>{
+		eager_internal!{
+			@check_expansion[
+				[[$body_first $($prefix)*][]]
+				$([$prefix_rest $postfix_rest $block_type])*
+			]
+			lazy!{$($body_rest)*} $($rest)*
+		}
+	};
+	(	// If the next token is a 'lazy!' macro call, ignore it,
+		// extracting its body (one at a time) such that it does not get eagerly expanded.
+		// (paren type)
+		@check_expansion[
+			[[$($prefix:tt)*][]]
+			$([$prefix_rest:tt $postfix_rest:tt $block_type:tt])*
+		]
+		lazy!($body_first:tt $($body_rest:tt)*) $($rest:tt)*
+	)=>{
+		eager_internal!{
+			@check_expansion[
+				[[$body_first $($prefix)*][]]
+				$([$prefix_rest $postfix_rest $block_type])*
+			]
+			lazy!($($body_rest)*) $($rest)*
+		}
+	};
+	(	// If the next token is an empty 'lazy!' macro call, ignore it. (brace type)
+		@check_expansion[
+			[[$($prefix:tt)*][]]
+			$([$prefix_rest:tt $postfix_rest:tt $block_type:tt])*
+		]
+		lazy!{} $($rest:tt)*
+	)=>{
+		eager_internal!{
+			@check_expansion[
+				[[$($prefix)*][]]
+				$([$prefix_rest $postfix_rest $block_type])*
+			]
+			$($rest)*
+		}
+	};
+	(	// If the next token is an empty 'lazy!' macro call, ignore it. (paren type)
+		@check_expansion[
+			[[$($prefix:tt)*][]]
+			$([$prefix_rest:tt $postfix_rest:tt $block_type:tt])*
+		]
+		lazy!() $($rest:tt)*
+	)=>{
+		eager_internal!{
+			@check_expansion[
+				[[$($prefix)*][]]
+				$([$prefix_rest $postfix_rest $block_type])*
+			]
+			$($rest)*
 		}
 	};
 	(	// If the next token isn't any of the above
