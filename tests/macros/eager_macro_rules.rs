@@ -32,7 +32,6 @@ mod test_produces_at_least_the_same{
 		assert_eq!(9, test_macro!{9});
 	}
 }
-
 mod test_produces_eager_macro{
 	/*
 	Test that a declared macro will work with eager!
@@ -53,7 +52,6 @@ mod test_produces_eager_macro{
 		assert_eq!(4, test_macro!{4});
 	}
 }
-
 mod test_eager_vs_non_eager_expansion_order{
 	/*
 	Test that the expanded macro has the eager versions of each rule first.
@@ -95,7 +93,6 @@ mod test_eager_vs_non_eager_expansion_order{
 	}
 	mac2!{SomeStruct}
 }
-
 mod test_multiple_macro_declarations{
 	/*
 	Test that multiple macros can be declared
@@ -141,5 +138,45 @@ mod test_multiple_macro_declarations{
 		assert_eq!(7, test_macro_7!{7});
 		assert_eq!(8, test_macro_8!{8});
 		assert_eq!(9, test_macro_9!{9});
+	}
+}
+mod test_attributes{
+	/*
+	Tests that can assign attributes to declared macros.
+	*/
+	
+	#[macro_use]
+	mod test_mod{
+		eager_macro_rules!{ $eager_1 $eager_2
+			#[macro_export]
+			#[doc(hidden)]	// Whether this gets the correct effect cannot be tested
+			macro_rules! test_macro_1{
+				() => {1};
+			}
+		}
+	}
+	#[test]
+	fn test(){
+		assert_eq!(1, test_macro_1!());
+	}
+}
+mod test_rustdoc{
+	/*
+	Tests that can assign rustdoc to the declared macros.
+	Whether the docs are generated correctly cannot be tested through usual
+	rust testing methods. But we can at least test that the docs may be present.
+	*/
+	
+	eager_macro_rules!{ $eager_1 $eager_2
+		///
+		/// Some docs
+		///
+		macro_rules! test_macro_1{
+			() => {1};
+		}
+	}
+	#[test]
+	fn test(){
+		assert_eq!(1, test_macro_1!());
 	}
 }
