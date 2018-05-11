@@ -6,11 +6,10 @@
 /// #[macro_use]
 /// extern crate dmutil;
 ///
-/// eager_macro_rules!{
-///     plus_1 $eager_1 $eager_2
-///     ()=>{
-///         + 1
-///     };
+/// eager_macro_rules!{ $eager_1 $eager_2
+///     macro_rules! plus_1{
+///         ()=>{+ 1};
+///     }
 /// }
 ///
 /// fn main(){
@@ -25,8 +24,8 @@
 ///
 /// * If a macro call is given as an argument to another macro, the first macro will be expanded
 /// first.
-/// * All macros will be fully expanded before `eager!` expands, meaning otherwise illegal
-/// intermediate expansion steps can be made possible.
+/// * All macros will be fully expanded before `eager!` expands, meaning - otherwise - illegal
+/// intermediate expansion steps are possible.
 ///
 /// `eager!` does not work with any macro; only macros declared using [`eager_macro_rules!`] may be
 /// used. Such macros are said to be `eager!`-enabled.
@@ -95,14 +94,14 @@
 /// #[macro_use]
 /// extern crate dmutil;
 ///
-/// eager_macro_rules!{
-///     add $eager_1 $eager_2
-///     ($e1:expr, $e2:expr)=> {$e1 + $e2}
-/// }
+/// eager_macro_rules!{ $eager_1 $eager_2
+///     macro_rules! add{
+///         ($e1:expr, $e2:expr)=> {$e1 + $e2}
+///     }
 ///
-/// eager_macro_rules!{
-///     two_and_three $eager_1 $eager_2
-///     ()=>{2,3}
+///     macro_rules! two_and_three{
+///     	()=>{2,3}
+///     }
 /// }
 ///
 /// fn main(){
@@ -134,9 +133,10 @@
 /// #[macro_use]
 /// extern crate dmutil;
 ///
-/// eager_macro_rules!{
-///     id $eager_1 $eager_2
-///     ()=> {SomeStruct}
+/// eager_macro_rules!{ $eager_1 $eager_2
+///     macro_rules! id{
+///         ()=> {SomeStruct}
+/// 	}
 /// }
 ///
 /// eager!{
@@ -203,21 +203,22 @@
 /// #[macro_use]
 /// extern crate dmutil;
 ///
-/// eager_macro_rules! {
-///     op $eager_1 $eager_2
-///     ( plus ) => { + };
-///     ( minus ) => { - };
-/// }
-/// eager_macro_rules! {
-///     integer $eager_1 $eager_2
-///     ( one ) => { 1 };
-///     ( two ) => { 2 };
-/// }
-/// eager_macro_rules! {
-///     calculate $eager_1 $eager_2
-///     ( $lhs:tt $op:tt $rhs:tt ) => {
-///          eager!{integer!{$lhs} op!{$op} integer!{$rhs}}
-///     };
+/// eager_macro_rules!{ $eager_1 $eager_2
+///     macro_rules! op{
+///         ( plus ) => { + };
+///         ( minus ) => { - };
+///     }
+///
+///     macro_rules! integer{
+///         ( one ) => { 1 };
+///         ( two ) => { 2 };
+///     }
+///
+///     macro_rules! calculate{
+///         ( $lhs:tt $op:tt $rhs:tt ) => {
+///              eager!{integer!{$lhs} op!{$op} integer!{$rhs}}
+///         };
+/// 	}
 /// }
 ///
 /// fn main(){

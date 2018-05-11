@@ -1,6 +1,7 @@
 
 
 eager_macro_rules! {
+	$eager_1 $eager_2
 	///
 	/// [[eager!](macro.eager.html)] Reverses a stream of token trees (tt).
 	///
@@ -56,84 +57,84 @@ eager_macro_rules! {
 	///
 	///
 	#[macro_export]
-	reverse_tt $eager_1 $eager2
-	{
-		$($rest:tt)*
-	}=>{
-		reverse_tt_internal!{
-			$($rest)*
-		}
-	};
-}
-
-eager_macro_rules! {
+	macro_rules! reverse_tt{
+		{
+			$($rest:tt)*
+		}=>{
+			reverse_tt_internal!{
+				$($rest)*
+			}
+		};
+	}
+	
 	#[macro_export]
 	#[doc(hidden)]
-	reverse_tt_internal $eager_1 $eager2
-	{
-		$(@done{$($prev:tt)*})* [$($all:tt)*] $($rest:tt)*
-	}=>{
-		reverse_tt!{
-			$(@done{$($prev)*})*
-			|{} [$($all)*] $($rest)*
-		}
-	};
-	{
-		$(@done{$($prev:tt)*})* |[$($all:tt)*] $($rest:tt)*
-	}=>{
-		reverse_tt!{
-			$(@done{$($prev)*})*
-			|{} [$($all)*] $($rest)*
-		}
-	};
-	{
-		{$($all:tt)*} $($rest:tt)*
-	}=>{
-		reverse_tt!{ |{$($all)*} $($rest)*}
-	};
-	{
-		// Reverse
-		$(@done{$($prev:tt)*})*
-		|{$($reversed:tt)*} [$start:tt $($unreversed:tt)*] $($rest:tt)*
-	}=>{
-		reverse_tt!{
-			$(@done{$($prev)*})*
-			|{$start $($reversed)*} [$($unreversed)*] $($rest)*
-		}
-	};
-	{
-		// nothing to a reverse
-		$(@done{$($prev:tt)*})*
-		|{$($reversed:tt)*} [] $($rest:tt)*
-	}=>{
-		reverse_tt!{
-			$(@done{$($prev)*})*
-			|{$($reversed)*} $($rest)*
-		}
-	};
-	{
-		// Non-reverse merge
-		$(@done{$($prev:tt)*})*
-		|{$($reversed:tt)*} {$($no_r:tt)*} $($rest:tt)*
-	}=>{
-		reverse_tt!{
-			$(@done{$($prev)*})*
-			|{$($no_r)* $($reversed)*} $($rest)*
-		}
-	};
-	{
-		// We done know the next '|{}' is done
-		$(@done{$($prev:tt)*})* |{$($done:tt)*} | $($rest:tt)*
-	}=>{
-		reverse_tt!{
-			$(@done{$($prev)*})* @done{$($done)*}
-			| $($rest)*
-		}
-	};
-	{
-		//All done
-		$(@done{$($done:tt)*})* |{$($last:tt)*}
-	}=>{
-		$($($done)*)* $($last)*
-	};
+	macro_rules! reverse_tt_internal{
+		{
+			$(@done{$($prev:tt)*})* [$($all:tt)*] $($rest:tt)*
+		}=>{
+			reverse_tt!{
+				$(@done{$($prev)*})*
+				|{} [$($all)*] $($rest)*
+			}
+		};
+		{
+			$(@done{$($prev:tt)*})* |[$($all:tt)*] $($rest:tt)*
+		}=>{
+			reverse_tt!{
+				$(@done{$($prev)*})*
+				|{} [$($all)*] $($rest)*
+			}
+		};
+		{
+			{$($all:tt)*} $($rest:tt)*
+		}=>{
+			reverse_tt!{ |{$($all)*} $($rest)*}
+		};
+		{
+			// Reverse
+			$(@done{$($prev:tt)*})*
+			|{$($reversed:tt)*} [$start:tt $($unreversed:tt)*] $($rest:tt)*
+		}=>{
+			reverse_tt!{
+				$(@done{$($prev)*})*
+				|{$start $($reversed)*} [$($unreversed)*] $($rest)*
+			}
+		};
+		{
+			// nothing to a reverse
+			$(@done{$($prev:tt)*})*
+			|{$($reversed:tt)*} [] $($rest:tt)*
+		}=>{
+			reverse_tt!{
+				$(@done{$($prev)*})*
+				|{$($reversed)*} $($rest)*
+			}
+		};
+		{
+			// Non-reverse merge
+			$(@done{$($prev:tt)*})*
+			|{$($reversed:tt)*} {$($no_r:tt)*} $($rest:tt)*
+		}=>{
+			reverse_tt!{
+				$(@done{$($prev)*})*
+				|{$($no_r)* $($reversed)*} $($rest)*
+			}
+		};
+		{
+			// We done know the next '|{}' is done
+			$(@done{$($prev:tt)*})* |{$($done:tt)*} | $($rest:tt)*
+		}=>{
+			reverse_tt!{
+				$(@done{$($prev)*})* @done{$($done)*}
+				| $($rest)*
+			}
+		};
+		{
+			//All done
+			$(@done{$($done:tt)*})* |{$($last:tt)*}
+		}=>{
+			$($($done)*)* $($last)*
+		};
+	}
 }

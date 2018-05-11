@@ -12,6 +12,4 @@ macro_rules! lazy {
 	($($all:tt)*) => {compile_error!(
 		"'lazy!' may only be used inside an 'eager!' call and cannot be called directly."
 	)};
-
-
 }

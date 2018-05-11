@@ -4,20 +4,21 @@ mod test_prefix{
 	/*
 	Tests that input can be followed by a macro call
 	*/
-	eager_macro_rules! {
-		test_macro $eager_1 $eager_2
-		{ ! ! } =>{
-			eager!{
-				struct
-				test_macro!{??}
-			}
-		};
-		{ ?? } =>{
-			SomeName test_macro!{| |}
-		};
-		{ | | } =>{
-			{field: u32}
-		};
+	eager_macro_rules! {$eager_1 $eager_2
+		macro_rules! test_macro{
+			{ ! ! } =>{
+				eager!{
+					struct
+					test_macro!{??}
+				}
+			};
+			{ ?? } =>{
+				SomeName test_macro!{| |}
+			};
+			{ | | } =>{
+				{field: u32}
+			};
+		}
 	}
 	test_macro!(!!);
 }
@@ -25,21 +26,22 @@ mod test_postfix{
 	/*
 	Tests that a macro call can be precede some non-macro tokens.
 	*/
-	eager_macro_rules! {
-		test_macro $eager_1 $eager_2
-		(!!)=>{
-			eager!{
-				struct
-				test_macro!{??}
-			}
-		};
-		(??)=>{
-			test_macro!{||}
-			{field: u32}
-		};
-		(||)=>{
-			SomeStruct
-		};
+	eager_macro_rules! {$eager_1 $eager_2
+		macro_rules! test_macro{
+			(!!)=>{
+				eager!{
+					struct
+					test_macro!{??}
+				}
+			};
+			(??)=>{
+				test_macro!{||}
+				{field: u32}
+			};
+			(||)=>{
+				SomeStruct
+			};
+		}
 	}
 	test_macro!(!!);
 }
@@ -48,13 +50,14 @@ mod test_multiple_calls{
 	Test that multiple macro call can be done after each other
 	*/
 	use std::marker::PhantomData;
-	eager_macro_rules! {
-		mac1 $eager_1 $eager_2
-		{
-			$typ:tt
-		}=>{
-			$typ
-		};
+	eager_macro_rules! {$eager_1 $eager_2
+		macro_rules! mac1{
+			{
+				$typ:tt
+			}=>{
+				$typ
+			};
+		}
 	}
 	macro_rules! mac2{
 		($V:ident,$eq:tt)=>{
@@ -75,35 +78,36 @@ mod test_nested_calls{
 	to another macro.
 	*/
 	use std::marker::PhantomData;
-	eager_macro_rules! {
-		mac1 $eager_1 $eager_2
-		(!!)=>{
-			ph1: PhantomData<W>,ph2: PhantomData<V>
-		};
-	}
-	eager_macro_rules! {
-		mac2 $eager_1 $eager_2
-		{
-			$($to_encapsulate:tt)*
-		}=>{
-			{$($to_encapsulate)*}
+	eager_macro_rules! {$eager_1 $eager_2
+		macro_rules! mac1{
+			(!!)=>{
+				ph1: PhantomData<W>,ph2: PhantomData<V>
+			};
 		}
-	}
-	eager_macro_rules! {
-		mac3 $eager_1 $eager_2
-		($some:ident)=>{
-			eager!{
-				struct $some<V,W>
-				mac2!{
-					mac1!{mac3!{{SomeThing}}}
-				}
+	
+		macro_rules! mac2{
+			{
+				$($to_encapsulate:tt)*
+			}=>{
+				{$($to_encapsulate)*}
 			}
-		};
-		(
-			{SomeThing}
-		)=>{
-			!!
-		};
+		}
+		
+		macro_rules! mac3 {
+			($some:ident)=>{
+				eager!{
+					struct $some<V,W>
+					mac2!{
+						mac1!{mac3!{{SomeThing}}}
+					}
+				}
+			};
+			(
+				{SomeThing}
+			)=>{
+				!!
+			};
+		}
 	}
 	mac3!{SomeStruct}
 }
@@ -112,18 +116,19 @@ mod test_non_call_block_ignored{
 	Tests that a block that is not part of a macro call is left as is.
 	(Assuming there is no macro call in it).
 	*/
-	eager_macro_rules! {
-		test_macro $eager_1 $eager_2
-		() => {
-			eager!{
-				test_macro!{1}
-				{field: i32}
-				struct SomeSecondStruct{}
-			}
-		};
-		( 1 ) => {
-			struct SomeStruct
-		};
+	eager_macro_rules! { $eager_1 $eager_2
+		macro_rules! test_macro{
+			() => {
+				eager!{
+					test_macro!{1}
+					{field: i32}
+					struct SomeSecondStruct{}
+				}
+			};
+			( 1 ) => {
+				struct SomeStruct
+			};
+		}
 	}
 	test_macro!{}
 }
@@ -132,20 +137,21 @@ mod test_nested_eagers{
 	Tests that using the eager! macro inside the body of another eager! call
 	does nothing.
 	*/
-	eager_macro_rules! {
-		test_macro $eager_1 $eager_2
-		() => {
-			eager!{
-				struct
+	eager_macro_rules! { $eager_1 $eager_2
+		macro_rules! test_macro{
+			() => {
 				eager!{
-					test_macro!{1}
+					struct
+					eager!{
+						test_macro!{1}
+					}
+					{}
 				}
-				{}
-			}
-		};
-		( 1 ) => {
-			 SomeStruct
-		};
+			};
+			( 1 ) => {
+				 SomeStruct
+			};
+		}
 	}
 	test_macro!{}
 }
@@ -153,18 +159,19 @@ mod test_recursive_eagers{
 	/*
 	Tests that if an expansion creates a new 'eager!' call, it is ignored.
 	*/
-	eager_macro_rules! {
-		test_macro $eager_1 $eager_2
-		() => {
-			eager!{
-				struct
-				test_macro!{1}
-				{}
-			}
-		};
-		( 1 ) => {
-			eager!{SomeStruct}
-		};
+	eager_macro_rules! { $eager_1 $eager_2
+		macro_rules! test_macro{
+			() => {
+				eager!{
+					struct
+					test_macro!{1}
+					{}
+				}
+			};
+			( 1 ) => {
+				eager!{SomeStruct}
+			};
+		}
 	}
 	test_macro!{}
 }
@@ -172,10 +179,11 @@ mod test_sequencial_blocks_arent_merged{
 	/*
 	Test that if two block are immediately after each other, they are not merged into one block.
 	*/
-	eager_macro_rules!{
-		test_macro $eager_1 $eager2
-		({1}{2}) => {"Success"};
-		({1 2}) => {"Failure"};
+	eager_macro_rules!{ $eager_1 $eager_2
+		macro_rules! test_macro{
+			({1}{2}) => {"Success"};
+			({1 2}) => {"Failure"};
+		}
 	}
 	#[test]
 	fn test(){
@@ -188,11 +196,12 @@ mod test_block_before_macro_isnt_merged_with_expansion{
 	with the same block type, that these two blocks arent merged after the macro is expanded.
 	I.e. ' {1} some_macro!()' becomes '{1}{2}' and not '{1 2}'.
 	*/
-	eager_macro_rules!{
-		test_macro $eager_1 $eager2
-		({1}{2}) => {"Success"};
-		({1 2}) => {"Failure"};
-		() => {{2}}
+	eager_macro_rules!{ $eager_1 $eager_2
+		macro_rules! test_macro{
+			({1}{2}) => {"Success"};
+			({1 2}) => {"Failure"};
+			() => {{2}}
+		}
 	}
 	#[test]
 	fn test(){
@@ -210,22 +219,23 @@ mod paren_test_prefix{
 	/*
 	Tests that input can be followed by a macro call
 	*/
-	eager_macro_rules! {
-		test_macro $eager_1 $eager_2
-		(!! ) =>{
-			eager!{
-				const N: i32 = test_macro!(1);
-			}
-		};
-		( 1 ) =>{
-			(5+5) test_macro!(2)
-		};
-		( 2	) =>{
-			+ 1 test_macro!(3)
-		};
-		( 3 ) =>{
-			+ (5)
-		};
+	eager_macro_rules!{ $eager_1 $eager_2
+		macro_rules! test_macro{
+			(!! ) =>{
+				eager!{
+					const N: i32 = test_macro!(1);
+				}
+			};
+			( 1 ) =>{
+				(5+5) test_macro!(2)
+			};
+			( 2	) =>{
+				+ 1 test_macro!(3)
+			};
+			( 3 ) =>{
+				+ (5)
+			};
+		}
 	}
 	test_macro!(!!);
 	#[test]
@@ -237,22 +247,23 @@ mod paren_test_postfix{
 	/*
 	Tests that a macro call can be followed by a macro call
 	*/
-	eager_macro_rules! {
-		test_macro $eager_1 $eager_2
-		(!! ) =>{
-			eager!{
-				const N: i32 = test_macro!(1);
-			}
-		};
-		( 1 ) =>{
-			test_macro!(2) (5+5)
-		};
-		( 2 ) =>{
-			test_macro!(3) 1 +
-		};
-		( 3 ) =>{
-			(5) +
-		};
+	eager_macro_rules!{ $eager_1 $eager_2
+		macro_rules! test_macro{
+			(!! ) =>{
+				eager!{
+					const N: i32 = test_macro!(1);
+				}
+			};
+			( 1 ) =>{
+				test_macro!(2) (5+5)
+			};
+			( 2 ) =>{
+				test_macro!(3) 1 +
+			};
+			( 3 ) =>{
+				(5) +
+			};
+		}
 	}
 	test_macro!(!!);
 	#[test]
@@ -264,16 +275,17 @@ mod paren_test_multiple_calls{
 	/*
 	Tests that multliple macro calls can be done in serial
 	*/
-	eager_macro_rules! {
-		test_macro $eager_1 $eager_2
-		(!! ) =>{
-			eager!{
-				const N: i32 = test_macro!(1) + test_macro!(1) + test_macro!(1);
-			}
-		};
-		( 1 ) =>{
-			(5+5)
-		};
+	eager_macro_rules!{ $eager_1 $eager_2
+		macro_rules! test_macro{
+			(!! ) =>{
+				eager!{
+					const N: i32 = test_macro!(1) + test_macro!(1) + test_macro!(1);
+				}
+			};
+			( 1 ) =>{
+				(5+5)
+			};
+		}
 	}
 	test_macro!(!!);
 	#[test]
@@ -292,23 +304,24 @@ mod paren_test_nested_calls{
 			}
 		};
 	}
-	eager_macro_rules! {
-		test_macro_2 $eager_1 $eager_2
-		( $($all:tt)* ) =>{
-			($($all)*) + 2
-		};
-	}
-	eager_macro_rules! {
-		test_macro_3 $eager_1 $eager_2
-		( $($all:tt)* ) =>{
-			1 + ($($all)*) + 2
-		};
-	}
-	eager_macro_rules! {
-		test_macro_4 $eager_1 $eager_2
-		( ) =>{
-			4
-		};
+	eager_macro_rules!{ $eager_1 $eager_2
+		macro_rules! test_macro_2{
+			( $($all:tt)* ) =>{
+				($($all)*) + 2
+			};
+		}
+		
+		macro_rules! test_macro_3{
+			( $($all:tt)* ) =>{
+				1 + ($($all)*) + 2
+			};
+		}
+	
+		macro_rules! test_macro_4{
+			( ) =>{
+				4
+			};
+		}
 	}
 	test_macro_1!(!!);
 	#[test]
@@ -318,18 +331,19 @@ mod paren_test_nested_calls{
 }
 mod paren_test_non_call_block_ignored{
 	
-	eager_macro_rules! {
-		test_macro $eager_1 $eager_2
-		() => {
-			eager!{
-				test_macro!(1)
-				(4 + 4)
-				 + 4
-			}
-		};
-		( 1 ) => {
-			4 +
-		};
+	eager_macro_rules!{ $eager_1 $eager_2
+		macro_rules! test_macro{
+			() => {
+				eager!{
+					test_macro!(1)
+					(4 + 4)
+					 + 4
+				}
+			};
+			( 1 ) => {
+				4 +
+			};
+		}
 	}
 	#[test]
 	fn test(){
@@ -341,19 +355,20 @@ mod paren_test_nested_eagers{
 	Tests that using the eager! macro inside the body of another eager! call
 	does nothing.
 	*/
-	eager_macro_rules! {
-		test_macro $eager_1 $eager_2
-		() => {
-			eager!(
-				1
+	eager_macro_rules!{ $eager_1 $eager_2
+		macro_rules! test_macro{
+			() => {
 				eager!(
-					test_macro!(1)
+					1
+					eager!(
+						test_macro!(1)
+					)
 				)
-			)
-		};
-		( 1 ) => {
-			+ 2
-		};
+			};
+			( 1 ) => {
+				+ 2
+			};
+		}
 	}
 	#[test]
 	fn test(){
@@ -364,16 +379,17 @@ mod pare_test_recursive_eagers{
 	/*
 	Tests that if an expansion creates a new 'eager!' call, it is ignored.
 	*/
-	eager_macro_rules! {
-		test_macro $eager_1 $eager_2
-		() => {
-			eager!(
-				1 test_macro!(1)
-			)
-		};
-		( 1 ) => {
-			eager!(+ 2)
-		};
+	eager_macro_rules!{ $eager_1 $eager_2
+		macro_rules! test_macro{
+			() => {
+				eager!(
+					1 test_macro!(1)
+				)
+			};
+			( 1 ) => {
+				eager!(+ 2)
+			};
+		}
 	}
 	#[test]
 	fn test(){

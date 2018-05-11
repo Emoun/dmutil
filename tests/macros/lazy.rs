@@ -6,9 +6,10 @@ mod test_lazy_block_is_ignored {
 	macro_rules! lazy_macro{
 		() => {1 + 1};
 	}
-	eager_macro_rules!{
-		eager_macro $eager_1 $eager_2
-		() => {1 + };
+	eager_macro_rules!{ $eager_1 $eager_2
+		macro_rules! eager_macro{
+			() => {1 + };
+		}
 	}
 	
 	#[test]
@@ -31,9 +32,10 @@ mod paren_test_lazy_block_is_ignored {
 	macro_rules! lazy_macro{
 		() => {1 + 1};
 	}
-	eager_macro_rules!{
-		eager_macro $eager_1 $eager_2
-		() => {1 + };
+	eager_macro_rules!{ $eager_1 $eager_2
+		macro_rules! eager_macro{
+			() => {1 + };
+		}
 	}
 	
 	#[test]
