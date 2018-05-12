@@ -1,7 +1,7 @@
 
 
 eager_macro_rules! {
-	$eager_1 $eager_2
+	$eager_1
 	///
 	/// [[eager!](macro.eager.html)] Reverses a stream of token trees (tt).
 	///

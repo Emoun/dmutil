@@ -5,8 +5,7 @@ mod test_produces_at_least_the_same{
 	Test that a declared macro will work as if it was produced with 'macro_rules'
 	when not called through'eager'
 	*/
-	eager_macro_rules!{
-		$eager_var_1 $eager_var_2
+	eager_macro_rules!{$eager_1
 		macro_rules! test_macro{
 			{1} =>{ 1 };
 			(2) => ( 2 );
@@ -36,8 +35,7 @@ mod test_produces_eager_macro{
 	/*
 	Test that a declared macro will work with eager!
 	*/
-	eager_macro_rules!{
-		$eager_var_1 $eager_var_2
+	eager_macro_rules!{$eager_1
 		macro_rules! test_macro{
 			{1} => { + 1 };
 			{2} => {eager!{1 test_macro!(1)}};
@@ -73,8 +71,7 @@ mod test_eager_vs_non_eager_expansion_order{
 	rule will match the initial '@eager', which is not intended.
 	*/
 	
-	eager_macro_rules! {
-		$eager_1 $eager_2
+	eager_macro_rules! {$eager_1
 		macro_rules! mac1 {
 			{
 				$($to_encapsulate:tt)*
@@ -97,8 +94,7 @@ mod test_multiple_macro_declarations{
 	/*
 	Test that multiple macros can be declared
 	*/
-	eager_macro_rules!{
-		$eager_var_1 $eager_var_2
+	eager_macro_rules!{$eager_1
 		macro_rules! test_macro_1{
 			{1} =>{ 1 };
 		}
@@ -147,7 +143,7 @@ mod test_attributes{
 	
 	#[macro_use]
 	mod test_mod{
-		eager_macro_rules!{ $eager_1 $eager_2
+		eager_macro_rules!{ $eager_1
 			#[macro_export]
 			#[doc(hidden)]	// Whether this gets the correct effect cannot be tested
 			macro_rules! test_macro_1{
@@ -167,7 +163,7 @@ mod test_rustdoc{
 	rust testing methods. But we can at least test that the docs may be present.
 	*/
 	
-	eager_macro_rules!{ $eager_1 $eager_2
+	eager_macro_rules!{ $eager_1
 		///
 		/// Some docs
 		///

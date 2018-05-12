@@ -4,7 +4,7 @@ mod test_prefix{
 	/*
 	Tests that input can be followed by a macro call
 	*/
-	eager_macro_rules! {$eager_1 $eager_2
+	eager_macro_rules! {$eager_1
 		macro_rules! test_macro{
 			{ ! ! } =>{
 				eager!{
@@ -26,7 +26,7 @@ mod test_postfix{
 	/*
 	Tests that a macro call can be precede some non-macro tokens.
 	*/
-	eager_macro_rules! {$eager_1 $eager_2
+	eager_macro_rules! {$eager_1
 		macro_rules! test_macro{
 			(!!)=>{
 				eager!{
@@ -50,7 +50,7 @@ mod test_multiple_calls{
 	Test that multiple macro call can be done after each other
 	*/
 	use std::marker::PhantomData;
-	eager_macro_rules! {$eager_1 $eager_2
+	eager_macro_rules! {$eager_1
 		macro_rules! mac1{
 			{
 				$typ:tt
@@ -78,7 +78,7 @@ mod test_nested_calls{
 	to another macro.
 	*/
 	use std::marker::PhantomData;
-	eager_macro_rules! {$eager_1 $eager_2
+	eager_macro_rules! {$eager_1
 		macro_rules! mac1{
 			(!!)=>{
 				ph1: PhantomData<W>,ph2: PhantomData<V>
@@ -116,7 +116,7 @@ mod test_non_call_block_ignored{
 	Tests that a block that is not part of a macro call is left as is.
 	(Assuming there is no macro call in it).
 	*/
-	eager_macro_rules! { $eager_1 $eager_2
+	eager_macro_rules! {$eager_1
 		macro_rules! test_macro{
 			() => {
 				eager!{
@@ -137,7 +137,7 @@ mod test_nested_eagers{
 	Tests that using the eager! macro inside the body of another eager! call
 	does nothing.
 	*/
-	eager_macro_rules! { $eager_1 $eager_2
+	eager_macro_rules! {$eager_1
 		macro_rules! test_macro{
 			() => {
 				eager!{
@@ -159,7 +159,7 @@ mod test_recursive_eagers{
 	/*
 	Tests that if an expansion creates a new 'eager!' call, it is ignored.
 	*/
-	eager_macro_rules! { $eager_1 $eager_2
+	eager_macro_rules! {$eager_1
 		macro_rules! test_macro{
 			() => {
 				eager!{
@@ -179,7 +179,7 @@ mod test_sequencial_blocks_arent_merged{
 	/*
 	Test that if two block are immediately after each other, they are not merged into one block.
 	*/
-	eager_macro_rules!{ $eager_1 $eager_2
+	eager_macro_rules!{$eager_1
 		macro_rules! test_macro{
 			({1}{2}) => {"Success"};
 			({1 2}) => {"Failure"};
@@ -196,7 +196,7 @@ mod test_block_before_macro_isnt_merged_with_expansion{
 	with the same block type, that these two blocks arent merged after the macro is expanded.
 	I.e. ' {1} some_macro!()' becomes '{1}{2}' and not '{1 2}'.
 	*/
-	eager_macro_rules!{ $eager_1 $eager_2
+	eager_macro_rules!{$eager_1
 		macro_rules! test_macro{
 			({1}{2}) => {"Success"};
 			({1 2}) => {"Failure"};
@@ -219,7 +219,7 @@ mod paren_test_prefix{
 	/*
 	Tests that input can be followed by a macro call
 	*/
-	eager_macro_rules!{ $eager_1 $eager_2
+	eager_macro_rules!{$eager_1
 		macro_rules! test_macro{
 			(!! ) =>{
 				eager!{
@@ -247,7 +247,7 @@ mod paren_test_postfix{
 	/*
 	Tests that a macro call can be followed by a macro call
 	*/
-	eager_macro_rules!{ $eager_1 $eager_2
+	eager_macro_rules!{$eager_1
 		macro_rules! test_macro{
 			(!! ) =>{
 				eager!{
@@ -275,7 +275,7 @@ mod paren_test_multiple_calls{
 	/*
 	Tests that multliple macro calls can be done in serial
 	*/
-	eager_macro_rules!{ $eager_1 $eager_2
+	eager_macro_rules!{$eager_1
 		macro_rules! test_macro{
 			(!! ) =>{
 				eager!{
@@ -304,7 +304,7 @@ mod paren_test_nested_calls{
 			}
 		};
 	}
-	eager_macro_rules!{ $eager_1 $eager_2
+	eager_macro_rules!{$eager_1
 		macro_rules! test_macro_2{
 			( $($all:tt)* ) =>{
 				($($all)*) + 2
@@ -331,7 +331,7 @@ mod paren_test_nested_calls{
 }
 mod paren_test_non_call_block_ignored{
 	
-	eager_macro_rules!{ $eager_1 $eager_2
+	eager_macro_rules!{$eager_1
 		macro_rules! test_macro{
 			() => {
 				eager!{
@@ -355,7 +355,7 @@ mod paren_test_nested_eagers{
 	Tests that using the eager! macro inside the body of another eager! call
 	does nothing.
 	*/
-	eager_macro_rules!{ $eager_1 $eager_2
+	eager_macro_rules!{$eager_1
 		macro_rules! test_macro{
 			() => {
 				eager!(
@@ -379,7 +379,7 @@ mod pare_test_recursive_eagers{
 	/*
 	Tests that if an expansion creates a new 'eager!' call, it is ignored.
 	*/
-	eager_macro_rules!{ $eager_1 $eager_2
+	eager_macro_rules!{$eager_1
 		macro_rules! test_macro{
 			() => {
 				eager!(

@@ -46,7 +46,7 @@ macro_rules! eager_macro_rules{
 
 // Start by decoding the initial values
 	(
-		$dollar1:tt $id_1:ident $dollar2:tt $id_2:ident
+		$dollar1:tt $id_1:ident
 		$(
 			$(#[$($metas:tt)*])*
 			macro_rules! $macro_name:ident {
@@ -58,7 +58,7 @@ macro_rules! eager_macro_rules{
 			eager_macro_rules_internal!{
 				@first[
 					$(#[$($metas)*])*
-					$macro_name $dollar1 $id_1 $dollar2 $id_2
+					$macro_name $dollar1 $id_1
 				]
 				$($rules => $expansions)*
 			}
@@ -73,14 +73,14 @@ macro_rules! eager_macro_rules_internal{
 	(
 		@first[
 			$(#[$($metas:tt)*])*
-			$macro_name:ident $dollar1:tt $id_1:ident $dollar2:tt $id_2:ident
+			$macro_name:ident $dollar1:tt $id_1:ident
 			$($prev_grammar:tt => $prev_expansion:tt)*
 		]
 	) => {
 		eager_macro_rules_internal!{
 			@final[
 				$(#[$($metas)*])*
-				$macro_name$dollar1 $id_1 $dollar2 $id_2
+				$macro_name$dollar1 $id_1
 				$($prev_grammar => $prev_expansion)*
 			]
 		}
@@ -90,7 +90,7 @@ macro_rules! eager_macro_rules_internal{
 	(
 		@first[
 			$(#[$($metas:tt)*])*
-			$macro_name:ident $dollar1:tt $id_1:ident $dollar2:tt $id_2:ident
+			$macro_name:ident $dollar1:tt $id_1:ident
 			$($prev_grammar:tt => $prev_expansion:tt)*
 		]
 		{$($next_grammar:tt)*} $($rest:tt)+
@@ -98,7 +98,7 @@ macro_rules! eager_macro_rules_internal{
 		eager_macro_rules_internal!{
 			@expansion[
 				$(#[$($metas)*])*
-				$macro_name$dollar1 $id_1 $dollar2 $id_2
+				$macro_name$dollar1 $id_1
 				$($prev_grammar => $prev_expansion)*
 				[$($next_grammar)*]
 			]
@@ -108,7 +108,7 @@ macro_rules! eager_macro_rules_internal{
 	(
 		@first[
 			$(#[$($metas:tt)*])*
-			$macro_name:ident $dollar1:tt $id_1:ident $dollar2:tt $id_2:ident
+			$macro_name:ident $dollar1:tt $id_1:ident
 			$($prev_grammar:tt => $prev_expansion:tt)*
 		]
 		($($next_grammar:tt)*) $($rest:tt)+
@@ -116,7 +116,7 @@ macro_rules! eager_macro_rules_internal{
 		eager_macro_rules_internal!{
 			@expansion[
 				$(#[$($metas)*])*
-				$macro_name$dollar1 $id_1 $dollar2 $id_2
+				$macro_name$dollar1 $id_1
 				$($prev_grammar => $prev_expansion)*
 				[$($next_grammar)*]
 			]
@@ -126,7 +126,7 @@ macro_rules! eager_macro_rules_internal{
 	(
 		@first[
 			$(#[$($metas:tt)*])*
-			$macro_name:ident $dollar1:tt $id_1:ident $dollar2:tt $id_2:ident
+			$macro_name:ident $dollar1:tt $id_1:ident
 			$($prev_grammar:tt => $prev_expansion:tt)*
 		]
 		[$($next_grammar:tt)*] $($rest:tt)+
@@ -134,7 +134,7 @@ macro_rules! eager_macro_rules_internal{
 		eager_macro_rules_internal!{
 			@expansion[
 				$(#[$($metas)*])*
-				$macro_name$dollar1 $id_1 $dollar2 $id_2
+				$macro_name$dollar1 $id_1
 				$($prev_grammar => $prev_expansion)*
 				[$($next_grammar)*]
 			]
@@ -146,7 +146,7 @@ macro_rules! eager_macro_rules_internal{
 	(
 		@expansion[
 			$(#[$($metas:tt)*])*
-			$macro_name:ident $dollar1:tt $id_1:ident $dollar2:tt $id_2:ident
+			$macro_name:ident $dollar1:tt $id_1:ident
 			$({$($prev_grammar:tt)*} => $prev_expansion:tt)*
 			[$($next_grammar:tt)*]
 		]
@@ -155,7 +155,7 @@ macro_rules! eager_macro_rules_internal{
 		eager_macro_rules_internal!{
 			@first[
 				$(#[$($metas)*])*
-				$macro_name$dollar1 $id_1 $dollar2 $id_2
+				$macro_name$dollar1 $id_1
 				$({$($prev_grammar)*}  => $prev_expansion)*
 				{$($next_grammar)*} => {$($next_expansion)*}
 			]
@@ -165,7 +165,7 @@ macro_rules! eager_macro_rules_internal{
 	(
 		@expansion[
 			$(#[$($metas:tt)*])*
-			$macro_name:ident $dollar1:tt $id_1:ident $dollar2:tt $id_2:ident
+			$macro_name:ident $dollar1:tt $id_1:ident
 			$({$($prev_grammar:tt)*} => $prev_expansion:tt)*
 			[$($next_grammar:tt)*]
 		]
@@ -174,7 +174,7 @@ macro_rules! eager_macro_rules_internal{
 		eager_macro_rules_internal!{
 			@first[
 				$(#[$($metas)*])*
-				$macro_name$dollar1 $id_1 $dollar2 $id_2
+				$macro_name$dollar1 $id_1
 				$({$($prev_grammar)*}  => $prev_expansion)*
 				{$($next_grammar)*} => {$($next_expansion)*}
 			]
@@ -184,7 +184,7 @@ macro_rules! eager_macro_rules_internal{
 	(
 		@expansion[
 			$(#[$($metas:tt)*])*
-			$macro_name:ident $dollar1:tt $id_1:ident $dollar2:tt $id_2:ident
+			$macro_name:ident $dollar1:tt $id_1:ident
 			$({$($prev_grammar:tt)*} => $prev_expansion:tt)*
 			[$($next_grammar:tt)*]
 		]
@@ -193,7 +193,7 @@ macro_rules! eager_macro_rules_internal{
 		eager_macro_rules_internal!{
 			@first[
 				$(#[$($metas)*])*
-				$macro_name$dollar1 $id_1 $dollar2 $id_2
+				$macro_name$dollar1 $id_1
 				$({$($prev_grammar)*}  => $prev_expansion)*
 				{$($next_grammar)*} => {$($next_expansion)*}
 			]
@@ -204,7 +204,7 @@ macro_rules! eager_macro_rules_internal{
 // Output
 	(	@final[
 			$(#[$($metas:tt)*])*
-			$macro_name:ident $dollar1:tt $id_1:ident $dollar2:tt $id_2:ident
+			$macro_name:ident $dollar1:tt $id_1:ident
 			$({$($rules_grammar:tt)*} => {$($rules_expansion:tt)*})+
 		]
 	)=>{
@@ -213,13 +213,12 @@ macro_rules! eager_macro_rules_internal{
 			$(
 				// First the eager supporting version
 				{
-					@eager[[$dollar1($dollar1 $id_1:tt)*] $dollar2($dollar2 $id_2:tt)*]
+					@eager[$dollar1($dollar1 $id_1:tt)*]
 					$($rules_grammar)*
 				} => {
 					eager_internal!{
-						@from_macro[$dollar2($dollar2$id_2)*]
+						@from_macro[$dollar1($dollar1 $id_1)*]
 						$($rules_expansion)*
-						$dollar1($dollar1$id_1)*
 					}
 				};
 			)+

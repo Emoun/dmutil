@@ -275,7 +275,7 @@ macro_rules! eager{
 	)=>{
 		eager_internal!{
 			@check_expansion[
-				[[][]]
+				[[][][]]
 			]
 			$($all)*
 		}
@@ -285,244 +285,319 @@ macro_rules! eager{
 #[macro_export]
 #[doc(hidden)]
 macro_rules! eager_internal{
-	(	// From macro expansion
-		@from_macro[ $prefix:tt $($rest:tt)* ]
-		$($input:tt)*
-	)=>{
+	(
+		@from_macro[
+			[$lazy:tt $prefix:tt[$($postfix:tt)*]]
+			$($rest_decoded:tt)*
+		]
+		$($expanded:tt)*
+	) => {
 		eager_internal!{
 			@check_expansion[
-				[$prefix []]
-				$($rest)*
+				[$lazy $prefix[]]
+				$($rest_decoded)*
 			]
-			$($input)*
+			$($expanded)* $($postfix)*
 		}
 	};
 // Decode input stream
 	(	// If the next token is a block, check it (brace type)
 		@check_expansion[
-			[[$($prefix:tt)*][]]
-			$([$prefix_rest:tt $postfix_rest:tt $block_type:tt])*
+			[$lazy:tt [$($prefix:tt)*][]]
+			$($rest_decoded:tt)*
 		]
 		{$($body:tt)*} $($rest:tt)*
 	)=>{
 		eager_internal!{
 			@check_expansion[
-				[[][]]
-				[[$($prefix)*][$($rest)*]{}]
-				$([$prefix_rest $postfix_rest $block_type])*
+				[$lazy [][]]
+				[$lazy [$($prefix)*][$($rest)*]{}]
+				$($rest_decoded)*
 			]
 			$($body)*
 		}
 	};
 	(	// If the next token is a block, check it (parenthesis type)
 		@check_expansion[
-			[[$($prefix:tt)*][]]
-			$([$prefix_rest:tt $postfix_rest:tt $block_type:tt])*
+			[$lazy:tt [$($prefix:tt)*][]]
+			$($rest_decoded:tt)*
 		]
 		($($body:tt)*) $($rest:tt)*
 	)=>{
 		eager_internal!{
 			@check_expansion[
-				[[][]]
-				[[$($prefix)*][$($rest)*]()]
-				$([$prefix_rest $postfix_rest $block_type])*
+				[$lazy [][]]
+				[$lazy [$($prefix)*][$($rest)*]()]
+				$($rest_decoded)*
 			]
 			$($body)*
 		}
 	};
-	(	// If the next token is an 'eager!' macro call, ignore it,
-		// extracting the body. (brace type)
+// eager/lazy mode changes
+	(	// If the next token is an 'eager!' macro call and we are already
+		// in eager mode, ignore it, extracting the body. (brace type)
 		@check_expansion[
-			[[$($prefix:tt)*][]]
-			$([$prefix_rest:tt $postfix_rest:tt $block_type:tt])*
+			[[][$($prefix:tt)*][]]
+			$($rest_decoded:tt)*
 		]
 		eager!{$($body:tt)*} $($rest:tt)*
 	)=>{
 		eager_internal!{
 			@check_expansion[
-				[[$($prefix)*][]]
-				$([$prefix_rest $postfix_rest $block_type])*
+				[[][$($prefix)*][]]
+				$($rest_decoded)*
 			]
 			$($body)* $($rest)*
 		}
 	};
-	(	// If the next token is an 'eager!' macro call, ignore it,
-		// extracting the body. (parenthesis type)
+	(	// If the next token is an 'eager!' macro call and we are already
+		// in eager mode, ignore it, extracting the body. (parenthesis type)
 		@check_expansion[
-			[[$($prefix:tt)*][]]
-			$([$prefix_rest:tt $postfix_rest:tt $block_type:tt])*
+			[[][$($prefix:tt)*][]]
+			$($rest_decoded:tt)*
 		]
 		eager!($($body:tt)*) $($rest:tt)*
 	)=>{
 		eager_internal!{
 			@check_expansion[
-				[[$($prefix)*][]]
-				$([$prefix_rest $postfix_rest $block_type])*
+				[[][$($prefix)*][]]
+				$($rest_decoded)*
 			]
 			$($body)* $($rest)*
 		}
 	};
-	(	// If the next token is a 'lazy!' macro call, ignore it,
-		// extracting its body (one at a time) such that it does not get eagerly expanded.
-		// (brace type)
+	(	// If the next token is an 'lazy!' macro call and we are already
+		// in lazy mode, ignore it, extracting the body. (brace type)
 		@check_expansion[
-			[[$($prefix:tt)*][]]
-			$([$prefix_rest:tt $postfix_rest:tt $block_type:tt])*
+			[[@lazy][$($prefix:tt)*][]]
+			$($rest_decoded:tt)*
 		]
-		lazy!{$body_first:tt $($body_rest:tt)*} $($rest:tt)*
+		lazy!{$($body:tt)*} $($rest:tt)*
 	)=>{
 		eager_internal!{
 			@check_expansion[
-				[[$body_first $($prefix)*][]]
-				$([$prefix_rest $postfix_rest $block_type])*
+				[[@lazy][$($prefix)*][]]
+				$($rest_decoded)*
 			]
-			lazy!{$($body_rest)*} $($rest)*
+			$($body)* $($rest)*
 		}
 	};
-	(	// If the next token is a 'lazy!' macro call, ignore it,
-		// extracting its body (one at a time) such that it does not get eagerly expanded.
-		// (paren type)
+	(	// If the next token is an 'lazy!' macro call and we are already
+		// in lazy mode, ignore it, extracting the body. (parenthesis type)
 		@check_expansion[
-			[[$($prefix:tt)*][]]
-			$([$prefix_rest:tt $postfix_rest:tt $block_type:tt])*
+			[[@lazy][$($prefix:tt)*][]]
+			$($rest_decoded:tt)*
 		]
-		lazy!($body_first:tt $($body_rest:tt)*) $($rest:tt)*
+		lazy!($($body:tt)*) $($rest:tt)*
 	)=>{
 		eager_internal!{
 			@check_expansion[
-				[[$body_first $($prefix)*][]]
-				$([$prefix_rest $postfix_rest $block_type])*
+				[[@lazy][$($prefix)*][]]
+				$($rest_decoded)*
 			]
-			lazy!($($body_rest)*) $($rest)*
+			$($body)* $($rest)*
 		}
 	};
-	(	// If the next token is an empty 'lazy!' macro call, ignore it. (brace type)
+	(	// If the next token is an 'eager!' macro call and we are
+		// in lazy mode (brace type)
 		@check_expansion[
-			[[$($prefix:tt)*][]]
-			$([$prefix_rest:tt $postfix_rest:tt $block_type:tt])*
+			[[@lazy][$($prefix:tt)*][]]
+			$($rest_decoded:tt)*
 		]
-		lazy!{} $($rest:tt)*
+		eager!{$($body:tt)*} $($rest:tt)*
 	)=>{
 		eager_internal!{
 			@check_expansion[
-				[[$($prefix)*][]]
-				$([$prefix_rest $postfix_rest $block_type])*
+				[[][$($prefix)*][$($rest)*]]
+				$($rest_decoded)*
 			]
-			$($rest)*
+			$($body)*
 		}
 	};
-	(	// If the next token is an empty 'lazy!' macro call, ignore it. (paren type)
+	(	// If the next token is an 'eager!' macro call and we are
+		// in lazy mode, ignore it, extracting the body. (parenthesis type)
 		@check_expansion[
-			[[$($prefix:tt)*][]]
-			$([$prefix_rest:tt $postfix_rest:tt $block_type:tt])*
+			[[@lazy][$($prefix:tt)*][]]
+			$($rest_decoded:tt)*
 		]
-		lazy!() $($rest:tt)*
+		eager!($($body:tt)*) $($rest:tt)*
 	)=>{
 		eager_internal!{
 			@check_expansion[
-				[[$($prefix)*][]]
-				$([$prefix_rest $postfix_rest $block_type])*
+				[[][$($prefix)*][$($rest)*]]
+				$($rest_decoded)*
 			]
-			$($rest)*
+			$($body)*
 		}
 	};
+	(	// If the next token is an 'lazy!' macro call and we are
+		// in eager mode, ignore it, extracting the body. (brace type)
+		@check_expansion[
+			[[][$($prefix:tt)*][]]
+			$($rest_decoded:tt)*
+		]
+		lazy!{$($body:tt)*} $($rest:tt)*
+	)=>{
+		eager_internal!{
+			@check_expansion[
+				[[@lazy][$($prefix)*][$($rest)*]]
+				$($rest_decoded)*
+			]
+			$($body)*
+		}
+	};
+	(	// If the next token is an 'eager!' macro call and we are already
+		// in eager mode, ignore it, extracting the body. (parenthesis type)
+		@check_expansion[
+			[[][$($prefix:tt)*][]]
+			$($rest_decoded:tt)*
+		]
+		lazy!($($body:tt)*) $($rest:tt)*
+	)=>{
+		eager_internal!{
+			@check_expansion[
+				[[@lazy][$($prefix)*][$($rest)*]]
+				$($rest_decoded)*
+			]
+			$($body)*
+		}
+	};
+// end eager/lazy mode switches
 	(	// If the next token isn't any of the above
 		// it is safe to add it to the prefix
 		@check_expansion[
-			[[$($prefix:tt)*][]]
-			$([$prefix_rest:tt $postfix_rest:tt $block_type:tt])*
+			[$lazy:tt [$($prefix:tt)*][]]
+			$($rest_decoded:tt)*
 		]
 		$next:tt $($rest:tt)*
 	)=>{
 		eager_internal!{
 			@check_expansion[
-				[[$next $($prefix)*][]]
-				$([$prefix_rest $postfix_rest $block_type])*
+				[$lazy [$next $($prefix)*][]]
+				$($rest_decoded)*
 			]
 			$($rest)*
 		}
 	};
-	
 // Done decoding input
-	(	// When there is no more input and the last input was a macro call
+// Eager macro expansions
+	(	// When there is no more input, the last input was a macro call,
+		// and we are in eager mode, call the macro eagerly
 		// (brace type)
 		@check_expansion[
-			[[! $macro_name:tt $($prefix:tt)*][$($postfix:tt)*]{$($body:tt)*}]
-			$([$prefix_rest:tt $postfix_rest:tt $block_type:tt])*
+			[[][! $macro_name:tt $($prefix:tt)*][$($postfix:tt)*]{$($body:tt)*}]
+			$($rest_decoded:tt)*
 		]
 	)=>{
 		$macro_name!{
 			@eager[
-				 [$($postfix)*] [$($prefix)*]
-				 $([$prefix_rest $postfix_rest $block_type])*
+				[[][$($prefix)*][$($postfix)*]]
+				$($rest_decoded)*
 			]
 			$($body)*
 		}
 	};
-	(	// When there is no more input and the last input was a macro call
+	(	// When there is no more input and the last input was a macro call,
+		// and we are in eager mode, call the macro eagerly
 		// (parenthesis type)
 		@check_expansion[
-			[[! $macro_name:tt $($prefix:tt)*][$($postfix:tt)*]($($body:tt)*)]
-			$([$prefix_rest:tt $postfix_rest:tt $block_type:tt])*
+			[[][! $macro_name:tt $($prefix:tt)*][$($postfix:tt)*]($($body:tt)*)]
+			$($rest_decoded:tt)*
 		]
 	)=>{
 		$macro_name!{
 			@eager[
-				 [$($postfix)*] [$($prefix)*]
-				 $([$prefix_rest $postfix_rest $block_type])*
+				[[][$($prefix)*][$($postfix)*]]
+				$($rest_decoded)*
 			]
 			$($body)*
 		}
 	};
-	(	// When there is no more input and the last input wasn't a macro call
+// redecode postfixes
+	(	// When there is no more input, but there is some postfix,
+		// if the current mode is eager, redecode the postfix in lazy mode
+		@check_expansion[
+			[[]$prefix:tt [$($postfix:tt)+]]
+			$($rest:tt)*
+		]
+	)=>{
+		eager_internal!{
+			@check_expansion[
+				[[@lazy]$prefix[]]
+				$($rest)*
+			]
+			$($postfix)+
+		}
+	};
+	(	// When there is no more input, but there is some postfix,
+		// if the current mode is lazy, redecode the postfix in eager mode
+		@check_expansion[
+			[[@lazy]$prefix:tt [$($postfix:tt)+]]
+			$($rest:tt)*
+		]
+	)=>{
+		eager_internal!{
+			@check_expansion[
+				[[]$prefix[]]
+				$($rest)*
+			]
+			$($postfix)+
+		}
+	};
+// end redecode postfixes
+// Promote prefixes
+	(	// When there is no more input and the last input wasn't a macro call in eager mode
 		// insert it into the previous block (brace type)
 		@check_expansion[
-			[[$last:tt $($last_rest:tt)*][]]
-			[$prefix:tt $postfix:tt {$($body:tt)*}]
-			$([$prefix_rest:tt $postfix_rest:tt $block_type:tt])*
+			[$lazy_0:tt [$last:tt $($last_rest:tt)*] []]
+			[$lazy:tt $prefix:tt $postfix:tt {$($body:tt)*}]
+			$($rest:tt)*
 		]
 	)=>{
 		eager_internal!{
 			@check_expansion[
-				[[$($last_rest)*][]]
-				[$prefix $postfix {$last $($body)*}]
-				$([$prefix_rest $postfix_rest $block_type])*
+				[$lazy_0 [$($last_rest)*] []]
+				[$lazy $prefix $postfix {$last $($body)*}]
+				$($rest)*
 			]
 		}
 	};
-	(	// When there is no more input and the last input wasn't a macro call
+	(	// When there is no more input and the last input wasn't a macro call in eager mode
 		// insert it into the previous block (parenthesis type)
 		@check_expansion[
-			[[$last:tt $($last_rest:tt)*][]]
-			[$prefix:tt $postfix:tt ($($body:tt)*)]
-			$([$prefix_rest:tt $postfix_rest:tt $block_type:tt])*
+			[$lazy_0:tt[$last:tt $($last_rest:tt)*] []]
+			[$lazy:tt $prefix:tt $postfix:tt ($($body:tt)*)]
+			$($rest:tt)*
 		]
 	)=>{
 		eager_internal!{
 			@check_expansion[
-				[[$($last_rest)*][]]
-				[$prefix $postfix ($last $($body)*)]
-				$([$prefix_rest $postfix_rest $block_type])*
+				[$lazy_0[$($last_rest)*] []]
+				[$lazy $prefix $postfix ($last $($body)*)]
+				$($rest)*
 			]
 		}
 	};
-	(	// When all input has been promoted to the previous block
-		// remove the input catcher
+	(	// When there is no more input, prefix or postfix,
+		// but there is a previous block, remove the input catcher
 		@check_expansion[
-			[[][]]
-			$([$prefix_rest:tt $postfix_rest:tt $block_type:tt])+
+			[$lazy_0:tt[][]]
+			$([$lazy:tt $prefix:tt $postfix:tt $body:tt])+
+			
 		]
 	)=>{
 		eager_internal!{
 			@check_expansion[
-				$([$prefix_rest $postfix_rest $block_type])+
+				$([$lazy $prefix $postfix $body])+
 			]
 		}
 	};
+// end promote prefixes
+
 	(	// When there is no more input and no block
 		// output the result, reversing it to ensure correct order
 		@check_expansion[
-			[[$($result:tt)*][]]
+			[$lazy:tt [$($result:tt)*][]]
 		]
 	)=>{
 		reverse_tt!{ [$($result)*] }
@@ -531,14 +606,14 @@ macro_rules! eager_internal{
 		// the block must have already been checked,
 		// therefore, begin promoting to prefix (brace type)
 		@check_expansion[
-			[[$($prefix:tt)*][$($postfix:tt)*]{$($body:tt)*}]
-			$([$prefix_rest:tt $postfix_rest:tt $block_type_rest:tt])*
+			[$lazy:tt[$($prefix:tt)*][$($postfix:tt)*]{$($body:tt)*}]
+			$($rest:tt)*
 		]
 	)=>{
 		eager_internal!{
 			@promote[
-				[[{} $($prefix)*][$($postfix)*]{$($body)*}]
-				$([$prefix_rest $postfix_rest $block_type_rest])*
+				[$lazy[{} $($prefix)*][$($postfix)*]{$($body)*}]
+				$($rest)*
 			]
 		}
 	};
@@ -546,75 +621,75 @@ macro_rules! eager_internal{
 		// the block must have already been checked,
 		// so output everything (parenthesis type)
 		@check_expansion[
-			[[$($prefix:tt)*][$($postfix:tt)*]($($body:tt)*)]
-			$([$prefix_rest:tt $postfix_rest:tt $block_type_rest:tt])*
+			[$lazy:tt[$($prefix:tt)*][$($postfix:tt)*]($($body:tt)*)]
+			$($rest:tt)*
 		]
 	)=>{
 		eager_internal!{
 			@promote[
-				[[() $($prefix)*][$($postfix)*]($($body)*)]
-				$([$prefix_rest $postfix_rest $block_type_rest])*
+				[$lazy[() $($prefix)*][$($postfix)*]($($body)*)]
+				$($rest)*
 			]
 		}
 	};
 
 // Promoting blocks
 	(	// promote a checked block to prefix (brace type)
-		// We dont reverse the order in the block when
+		// We don't reverse the order in the block when
 		// it is promoted since the revert_tt! called later
 		// wont touch it.
 		@promote[
-			[[{$($other:tt)*} $($prefix:tt)*][$($postfix:tt)*]{$next:tt $($body:tt)*}]
-			$([$prefix_rest:tt $postfix_rest:tt $block_type_rest:tt])*
+			[$lazy:tt[{$($other:tt)*} $($prefix:tt)*][$($postfix:tt)*]{$next:tt $($body:tt)*}]
+			$($rest:tt)*
 		]
 	)=>{
 		eager_internal!{
 			@promote[
-				[[{$($other)* $next} $($prefix)*][$($postfix)*]{$($body)*}]
-				$([$prefix_rest $postfix_rest $block_type_rest])*
+				[$lazy[{$($other)* $next} $($prefix)*][$($postfix)*]{$($body)*}]
+				$($rest)*
 			]
 		}
 	};
 	(	// promote a checked block to prefix (paren type)
-		// We dont reverse the order in the block when
+		// We don't reverse the order in the block when
 		// it is promoted since the revert_tt! called later
 		// wont touch it.
 		@promote[
-			[[($($other:tt)*) $($prefix:tt)*][$($postfix:tt)*]($next:tt $($body:tt)*)]
-			$([$prefix_rest:tt $postfix_rest:tt $block_type_rest:tt])*
+			[$lazy:tt[($($other:tt)*) $($prefix:tt)*][$($postfix:tt)*]($next:tt $($body:tt)*)]
+			$($rest:tt)*
 		]
 	)=>{
 		eager_internal!{
 			@promote[
-				[[($($other)* $next) $($prefix)*][$($postfix)*]($($body)*)]
-				$([$prefix_rest $postfix_rest $block_type_rest])*
+				[$lazy[($($other)* $next) $($prefix)*][$($postfix)*]($($body)*)]
+				$($rest)*
 			]
 		}
 	};
 	(	// done promoting a checked block to prefix (brace type)
 		@promote[
-			[[$promoted:tt $($prefix:tt)*][$($postfix:tt)*]{}]
-			$([$prefix_rest:tt $postfix_rest:tt $block_type_rest:tt])*
+			[$lazy:tt[$promoted:tt $($prefix:tt)*][$($postfix:tt)*]{}]
+			$($rest:tt)*
 		]
 	)=>{
 		eager_internal!{
 			@check_expansion[
-				[[$promoted $($prefix)*][]]
-				$([$prefix_rest $postfix_rest $block_type_rest])*
+				[$lazy[$promoted $($prefix)*][]]
+				$($rest)*
 			]
 			$($postfix)*
 		}
 	};
 	(	// done promoting a checked block to prefix (paren type)
 		@promote[
-			[[$promoted:tt $($prefix:tt)*][$($postfix:tt)*]()]
-			$([$prefix_rest:tt $postfix_rest:tt $block_type_rest:tt])*
+			[$lazy:tt[$promoted:tt $($prefix:tt)*][$($postfix:tt)*]()]
+			$($rest:tt)*
 		]
 	)=>{
 		eager_internal!{
 			@check_expansion[
-				[[$promoted $($prefix)*][]]
-				$([$prefix_rest $postfix_rest $block_type_rest])*
+				[$lazy[$promoted $($prefix)*][]]
+				$($rest)*
 			]
 			$($postfix)*
 		}
