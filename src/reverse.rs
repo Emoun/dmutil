@@ -3,26 +3,26 @@
 eager_macro_rules! {
 	$eager_1
 	///
-	/// [[eager!](macro.eager.html)] Reverses a stream of token trees (tt).
+	/// [[eager!](macro.eager.html)] Reverses a list of token trees (tt).
 	///
-	/// Given a set of token trees in brackets `[1 2 3]`it will reverse their order and remove
+	/// Given a list of token trees in brackets `[1 2 3]`it will reverse their order and remove
 	/// the brackets: `3 2 1`. Chaining is also possible; the first group
-	/// will expand first after which the second one is expanded __and put in front
+	/// will be reversed first, after which the second one is reversed __and put to the right
 	/// of the first__: `[4 3][2 1] -> 1 2 3 4`.
 	///
-	/// Given a token tree in braces `{1 2 3}` it will __not__ reverse the order
-	/// and just remove the braces. Chaining also works here, and like before
+	/// A list of token trees in braces `{1 2 3}` will __not__ be reversed,
+	/// the braces are just removed. Chaining also works here, and like before
 	/// when the second is expanded, it is put __in front__ of the previous:
 	/// `{3 4}{1 2} -> 1 2 3 4`.
 	///
-	/// Both the above chaining work together and for more than 2 groups. The expand
+	/// Both the above chainings work together and for more than 2 groups. The reversal
 	/// order is always left to right: `[8 7]{5 6}[4 3]{1 2} -> 1 2 3 4 5 6 7 8`.
 	///
-	/// the pipe `|` can be used to restrict how far to the left groups are expanded to.
-	/// Everything to the right of a pipe will be expanded just after the pipe:
-	/// `[4 3 ]{1 2}|[8 7]{4 5} -> 1 2 3 4 5 6 7 8`
-	/// The following is a stepwise expand with the pipes:
-	/// `[4 3 ]{1 2}|[8 7]{5 6} -> 3 4 {1 2}| 7 8 {5 6} -> 1 2 3 4 5 6 7 8`
+	/// A pipe (`|`) can be used to restrict how far to the left groups are expanded to.
+	/// Everything to the right of a pipe will be reversed to just to the right of it:
+	/// `[4 3]{1 2} | [8 7]{4 5} -> 1 2 3 4 5 6 7 8`.
+	/// The following is a stepwise expansion with the pipes:
+	/// `[4 3]{1 2} | [8 7]{5 6} -> 3 4 {1 2} | 7 8 {5 6} -> 1 2 3 4 5 6 7 8`
 	///
 	/// ```
 	/// #[macro_use]
@@ -41,7 +41,7 @@ eager_macro_rules! {
 	///		assert!(reverse_tt!({2}{1 == }[- 3]));
 	///
 	///		// The following expand to '1 < 2 && 3 < 4
-	///		assert!(reverse_tt!({2}[< 1]|{}[4 <]{&& 3}));
+	///		assert!(reverse_tt!({2}[< 1]|[4 <]{&& 3}));
 	///
 	///		// Beware that only the order of the token trees is reversed
 	///		// and not the trees themselves.

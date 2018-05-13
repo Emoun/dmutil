@@ -24,7 +24,7 @@
 ///
 /// * If a macro call is given as an argument to another macro, the first macro will be expanded
 /// first.
-/// * All macros will be fully expanded before `eager!` expands, meaning - otherwise - illegal
+/// * All macros will be fully expanded before `eager!` expands. Therefore, otherwise illegal
 /// intermediate expansion steps are possible.
 ///
 /// `eager!` does not work with any macro; only macros declared using [`eager_macro_rules!`] may be
@@ -33,7 +33,7 @@
 /// To enable the use of non-`eager!`-enabled macros inside an `eager!` call,
 /// a `lazy!` block can be inserted. Everything inside the `lazy!` block will be lazily expanded,
 /// while everything outside it will continue to be eagerly expanded. Since, `lazy!` reverts
-/// to the usual rules for macro expansion, and `eager!` block can be inserted inside the `lazy!`
+/// to the usual rules for macro expansion, an `eager!` block can be inserted inside the `lazy!`
 /// block, to re-enable eager expansion for some subset of it.
 ///
 /// [`eager_macro_rules!`]: macro.eager_macro_rules.html
@@ -50,9 +50,9 @@
 /// recreate the bug without using `eager!`. Likewise, the error messages the compiler will
 /// emit are exponentially more cryptic than they already would have been.
 ///
-/// * It can only eagerly expand `eager!`-enabled macros, so existing macros cannot be used
-/// in new ways. The `lazy!` block alleviates this a bit,
-/// by allowing the use of existing macros in it, while eager expansion can be done around them.
+/// * Only `eager!`-enabled macros can be eagerly expanded, so existing macros do not gain much.
+/// The `lazy!` block alleviates this a bit, by allowing the use of existing macros in it,
+/// while eager expansion can be done around them.
 /// Luckily, `eager!`-enabling an existing macro should not be too much
 /// trouble using [`eager_macro_rules!`].
 ///
@@ -61,7 +61,9 @@
 ///
 /// Rust is lazy when it comes to macro expansion. When the compiler sees a macro call, it will
 /// try to expand the macro without looking at its arguments or what the expansion becomes.
-/// Using `eager!`, previously illegal macro expansions can be made possible:
+/// Using `eager!`, previously illegal macro expansions can be made possible.
+///
+/// The following is a non-exhaustive list of illegal macro patterns that can be used with `eager!`.
 ///
 /// ### The arguments to a macro usually cannot be the resulting expansion of another macro call:
 /// Say you have a macro that adds two numbers:
@@ -78,12 +80,12 @@
 /// }
 /// ```
 ///
-/// You cannot use the expansion of `two!` as an argument to `add!`:
+/// You cannot use the expansion of `two_and_three!` as an argument to `add!`:
 /// ```ignore
-/// let x = add!(two!()); // error
+/// let x = add!(two_and_three!()); // error
 /// ```
-/// The compiler will complain about no rule in `add!` accepting `two`, since `two!()` does not
-/// get expanded before the `add!` who requires two expression and not just one.
+/// The compiler will complain about no rule in `add!` accepting `two_and_three`, since it does not
+/// get expanded before the `add!`, who requires two expressions and not just one.
 ///
 /// With eager expansion, this can be made possible:
 /// ```
@@ -116,11 +118,12 @@
 /// ```
 /// And want to use it to declare a struct:
 /// ```ignore
-/// struct id!()
-/// {}
+/// struct id!(){
+///     v: u32
+/// }
 /// ```
 ///
-/// This will not compile since macros are illegal in identifier position, and the compiler does
+/// This will not compile since macros are illegal in identifier position. The compiler does
 /// not check whether the expansion of the macro will result in valid Rust code.
 ///
 /// With eager expansion, `id!` will expand before the `eager!` block , making it possible to use it
@@ -147,15 +150,16 @@
 /// }
 /// ```
 /// To circumvent any restriction on where macros can be used, we can therefore just wrap
-/// the code surrounding the macro call with `eager!`. `eager!` must still be in a valid position,
+/// the code surrounding the macro call with `eager!`. The `eager!` must still be in a valid position,
 /// but in the worst case it can be put around the whole item
 /// (struct, trait, implement, function, etc.).
 ///
 ///
 /// ### No intermediate expansion step can include invalid syntax
 ///
-/// Say we want to create a macro that interprets words, converting them into an expression.
-/// We start by declaring a macro that interprets operators:
+/// Say we want to create a macro that interprets natural language, converting it into an expression.
+///
+/// We start by declaring a macro that interprets operator words:
 /// ```ignore
 /// macro_rules! op{
 ///     ( plus ) => { + };
@@ -163,7 +167,7 @@
 /// }
 /// ```
 ///
-/// We then declare a macro that interprets integers from words:
+/// We then declare a macro that interprets integer words:
 /// ```ignore
 /// macro_rules! integer{
 ///     ( one ) => { 1 };
@@ -181,19 +185,18 @@
 /// }
 /// ```
 ///
-/// Using this macro will not compile:
+/// Using this macro will fail to compile:
 /// ```ignore
 /// let x = calculate!(one plus two); //Error
 /// ```
 ///
-/// Looking at the first expansion step:
+/// Looking at the first expansion step we can see that three macro calls in a sequence
+/// are not a valid expression:
 /// ```ignore
 /// let x = integer!(one) op!{plus} integer!(two); //Error
 /// ```
-/// We can see that three macro calls in a sequence are not a valid expression.
 ///
-/// We can use `eager!` to circumvent this restriction, by having `calculate!` expand
-/// into an `eager!` block:
+/// We can circumvent this restriction, by having `calculate!` wrap its output in an `eager!`:
 ///
 /// ```
 /// #[macro_use]
@@ -223,7 +226,7 @@
 /// }
 /// ```
 /// In this case, `calculate!` does not actually have to be `eager!`-enabled, since it is not inserted
-/// into an `eager!` block. Though - as per the [conventions](#conventions) - we do enable it such
+/// into an `eager!` block. Though - as per [the conventions](#conventions) - we do enable it such
 /// that others may later use it inside an `eager!` block.
 ///
 ///
@@ -232,7 +235,7 @@
 /// Since we expect the use of this macro to be broadly applicable, we propose the following
 /// conventions for the Rust community to use, to ease interoperability.
 ///
-/// ## Documentation
+/// ### Documentation
 ///
 /// To make it clearly visible that a given macro is `eager!`-enabled, its short rustdoc description
 /// must start with a pair of brackets, within which a link to the official `eager!` macro documentation
@@ -241,7 +244,7 @@
 ///
 /// See the [`reverse_tt!`](macro.reverse_tt.html) documentation for an example.
 ///
-/// ## Auxiliary variable
+/// ### Auxiliary variable
 ///
 /// The auxiliary variable that must always be provided to `eager_macro_rules!`
 /// must use the identifier `eager_1`. This makes it easier for everyone to

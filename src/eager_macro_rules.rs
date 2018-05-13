@@ -9,17 +9,17 @@
 /// Documentation and attributes are also given in the
 /// usual way just before each `macro_rules!`, i.e. inside `eager_macro_rules!`.
 ///
-/// Some restrictions apply to the macro_rules! declarations:
+/// Some restrictions apply to the `macro_rules!` declarations:
 ///
 /// * The identifier given at the beginning must not collide with any macro variable name
 /// used in any rule in any macro to be declared.
 /// * No rules should accept `@eager` as the first token, as this could conflict with the
-/// implementation of `eager!`. Wildcards may be used, as `eager_macro_rules!` will automatically
-/// solve the ambiguity with the `eager!` implementation.
+/// implementation of `eager!`. Wildcards are acceptable, as `eager_macro_rules!` will automatically
+/// resolve the ambiguity with the `eager!` implementation.
 ///
 /// # `eager!`-enabling example
 ///
-/// To [eager!](macro.eager.html)-enable the following macro:
+/// [eager!](macro.eager.html)-enabling the following macro:
 /// ```
 /// /// Some documentation
 /// #[macro_export]
@@ -27,7 +27,7 @@
 /// 	()=>{};
 /// }
 /// ```
-/// The whole above declaration must be changed to:
+/// is done by wrapping it in `eager_macro_rules!` as follows:
 /// ```
 /// #[macro_use] extern crate dmutil;
 /// eager_macro_rules!{ $eager_1
