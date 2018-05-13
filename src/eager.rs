@@ -280,9 +280,154 @@ macro_rules! eager{
 	};
 }
 
+/*
+Decoded format:
+[ [] [] [] [] {} ]
+  1  2  3  4  5
+
+1. The mode, either `[]` for eager or `[@lazy]` for lazy. Specifies whether the
+current decode mode is eager or lazy. If there is more input, then that input must be
+decoded in the mode. If there is no input, then the modefix must be decoded in the opposite mode.
+
+2. The modefix (mode postfix). Contains input that has yet to be decoded, and that would have
+to be decoded in the opposite mode to what is in 1.
+
+3. The block prefix, i.e. input that came before the current block (if there is one).
+Contains input that has been decoded and expanded completely. It is in
+reverse order that what it should be in the final result.
+
+4. The block postfix, i.e. input that came after the current block. If there is no
+block, then this must be empty.
+
+5. The current block, optional, and can be either `{}`, `[]`, or `()` which specifies the type
+of the block in the input. While the contents of the block are being decoded, it is empty.
+When the content has been decoded, checked, and expanded where appropriate it is input into
+the block.
+
+## Decoding workflow
+
+The decoding starts with an empty level that is by default in eager mode: `[[] [] [] []]`.
+
+Any input token that is not a block needs no work, therefore it is immediately put
+in the prefix as it can be output as is. We call these tokens simple tokens.
+We always token munch, which means the prfix is always in reverse order.
+We will unreverse it in the end using the `reverse!` macro.
+So if the input starts with the simple tokens `1 2 3`, the level will look like this:
+`[[] [] [3 2 1] []]`.
+
+Say the rest of the input is `{4 5 6} 7 8`. The block could contain a macro call that needs
+to be eagerly expanded, so we cannot just add the block to the prefix yet. To check the contents
+of the block we add the block to the current level, add the rest of the input (after the block)
+to the postfix, and make the contents of the block as our input. We also add a new level, which
+we will use to decode the blocks content.
+The levels are a stack, always using the top to decode, and putting new one on the top.
+The result is our decoded input becomes:
+```
+[[] [] [] []] // Used to decode the block contents
+[[] [] [3 2 1] [7 8] {}]
+```
+And our input is `4 5 6`. We can now ignore the second level (the original level) and trivially
+decode the simple tokens that were in the block:
+```
+[[] [] [6 5 4] []]
+[[] [] [3 2 1] [7 8] {}]
+```
+At this point we have no more input, which means the content of the block have been decoded
+and checked for any expansion needs. To signal that the block is done, we promote the prefix
+to the block in the second level, and pop the first level. Since the prefix is in reverse order,
+we unreverse it when putting it in the block. This is done with token munching:
+```
+[[] [] [3 2 1] [7 8] {4 5 6}]
+```
+Since we still have no more input to decode, but we can see that we have checked a block, we
+promote the block to prefix. At the same time, we take the blocks postfix and put it as input,
+such that it can be decoded:
+```
+[[] [] [{4 5 6} 3 2 1] []]
+```
+The block contents do not need to be reversed since the prefix is only reversed on the token tree
+level. Since the input after the block was just simple tokens we get:
+```
+[[] [] [8 7 {4 5 6} 3 2 1] []]
+```
+Now that we have no more input, no block, and no postfix, we know we have decoded everything
+and the contents of the prefix are our result. so we output the prefix in reverse order:
+`1 2 3 4 5 6 7 8`.
+
+To see how we handle macros, say our input has a macro invocation instead of the blocks:
+`1 2 some_macro!{t1 t2} 5 6`. We start, as usual, by decoding the first simple tokens.
+```
+[[] [] [! some_macro 2 1] []]
+```
+Note how the macro invocation is also put in the prefix. We then decode the block, checking its
+contents. When they have been checked and promoted into the block we will have:
+```
+[[] [] [! some_macro 2 1] [5 6]{t1 t2}]
+```
+At this point we would previously have promoted the block to the prefix, but we can now see
+that the prefix contains a macro invocation. Since we have checked the contents of the block,
+we know that we can safely call the macro with it. We do so, removing the invocation from the
+prefix, and removing the block. When the macro returns it will put its result as input, so the
+first thing we do is extract the postfix to the input too, putting it after the macros result,
+where it belongs. Our level will no look like:
+```
+[[] [] [2 1] []]
+```
+And say the macro expands to `3 4`, we will have the input `3 4 5 6`.
+Using our previous rules, the result will be `1 2 3 4 5 6`.
+
+Say we have a lazy block: `eager_macro_1!{} lazy!{ lazy_macro!{}} eager_macro_2!{}`
+Say `eager_macro_1!` expands to `1 2`, and `eager_macro_2!` expands to `3 4`, and both are
+`eager!`-enabled. `lazy_macro!` on the other hand is not `eager!`enabled.
+
+We startin the usual way, and after expanding the first macro we will have the levels:
+```
+[[] [] [2 1] []]
+```
+and the input `lazy!{ lazy_macro!{}} eager_macro_2!{}`. We can now see that the `lazy!` block
+is the opposite of the current mode (eager), so we will have to do a mode change. We take all
+input that is after the `lazy!` block, and put it is modefix as it still needs to be eagerly
+expanded. Then we change the mode to lazy. Lastly, we extract the content of the `lazy!` block
+and put it as input. This will result in the levels:
+```
+[[@lazy] [eager_macro_2!{}] [2 1] []]
+```
+and the input `lazy_macro!{}`. At this point we continue as we would have previously done,
+resulting in the block being checked (trivial since its empty) and no more input:
+```
+[[@lazy] [eager_macro_2!{}] [! lazy_macro 2 1] []{}]
+```
+Previously, we would have invoked `lazy_macro!`, since its block has been checked, but this time
+we are in lazy expansion mode. Therefore, there is no need to call the macro and we just promote
+the block to prefix immediately:
+```
+[[@lazy] [eager_macro_2!{}] [{}! lazy_macro 2 1] []]
+```
+At this point we have no more input and no block, but we still have something in the modefix.
+So, we extract that into input, and switch the mode, since the input in modefix always needs to
+be decoded in the opposite mode. So we get the levels:
+```
+[[] [] [{}! lazy_macro 2 1] []]
+```
+and input `eager_macro_2!{}`. The decoding now proceeds as previously described, resulting in
+`1 2 lazy_macro!{} 3 4` as output.
+
+Notes:
+
+* When decoding blocks, managing the type of the block is critical. This is the reason the block
+is not always `[]`. Therefore, when promoting blocks to prefix, make sure the block type is maintained.
+The following are examples of the same promotion, except the input uses the different blocks:
+`[[] [] [] [] {something}]` to `[[] [] [{something}] []]`.
+`[[] [] [] [] (something)]` to `[[] [] [(something)] []]`.
+`[[] [] [] [] [something]]` to `[[] [] [[something]] []]`.
+
+* Promoting modefix to input (the last step above) must only be done after all other input and
+blocks have been decoded fully.
+*/
 #[macro_export]
 #[doc(hidden)]
 macro_rules! eager_internal{
+// Handle return from eager macro expansion
 	(
 		@from_macro[
 			[$lazy:tt $modefix:tt $prefix:tt[$($postfix:tt)*]]
@@ -478,7 +623,7 @@ macro_rules! eager_internal{
 		}
 	};
 // Done decoding input
-// Eager macro expansions
+// Expanding macros in eager mode
 	(	// When there is no more input, the last input was a macro call,
 		// and we are in eager mode, call the macro eagerly
 		// (brace type)
@@ -511,7 +656,7 @@ macro_rules! eager_internal{
 			$($body)*
 		}
 	};
-// redecode modefixes
+// Promote modefix to input
 	(	// When there is no more input, but there is some postfix,
 		// if the current mode is eager, redecode the postfix in lazy mode
 		@check_expansion[
@@ -542,8 +687,8 @@ macro_rules! eager_internal{
 			$($modefix)+
 		}
 	};
-// end redecode modefixes
-// Promote prefixes
+// end Promote modefix to input
+// Promote prefix
 	(	// When there is no more input and the last input wasn't a macro call in eager mode
 		// insert it into the previous block (brace type)
 		@check_expansion[
@@ -590,16 +735,8 @@ macro_rules! eager_internal{
 			]
 		}
 	};
-// end promote prefixes
-
-	(	// When there is no more input and no block
-		// output the result, reversing it to ensure correct order
-		@check_expansion[
-			[$lazy:tt [][$($result:tt)*][]]
-		]
-	)=>{
-		reverse_tt!{ [$($result)*] }
-	};
+// end promote prefix
+// Promote block to prefix
 	(	// When there is no more input but a block,
 		// the block must have already been checked,
 		// therefore, begin promoting to prefix (brace type)
@@ -609,10 +746,11 @@ macro_rules! eager_internal{
 		]
 	)=>{
 		eager_internal!{
-			@promote[
-				[$lazy $modefix [{} $($prefix)*][$($postfix)*]{$($body)*}]
+			@check_expansion[
+				[$lazy $modefix [{$($body)*} $($prefix)*][]]
 				$($rest)*
 			]
+			$($postfix)*
 		}
 	};
 	(	// When there is no more input and but a block
@@ -624,73 +762,22 @@ macro_rules! eager_internal{
 		]
 	)=>{
 		eager_internal!{
-			@promote[
-				[$lazy $modefix [() $($prefix)*][$($postfix)*]($($body)*)]
-				$($rest)*
-			]
-		}
-	};
-
-// Promoting blocks
-	(	// promote a checked block to prefix (brace type)
-		// We don't reverse the order in the block when
-		// it is promoted since the revert_tt! called later
-		// wont touch it.
-		@promote[
-			[$lazy:tt $modefix:tt [{$($other:tt)*} $($prefix:tt)*][$($postfix:tt)*]{$next:tt $($body:tt)*}]
-			$($rest:tt)*
-		]
-	)=>{
-		eager_internal!{
-			@promote[
-				[$lazy $modefix [{$($other)* $next} $($prefix)*][$($postfix)*]{$($body)*}]
-				$($rest)*
-			]
-		}
-	};
-	(	// promote a checked block to prefix (paren type)
-		// We don't reverse the order in the block when
-		// it is promoted since the revert_tt! called later
-		// wont touch it.
-		@promote[
-			[$lazy:tt $modefix:tt [($($other:tt)*) $($prefix:tt)*][$($postfix:tt)*]($next:tt $($body:tt)*)]
-			$($rest:tt)*
-		]
-	)=>{
-		eager_internal!{
-			@promote[
-				[$lazy $modefix [($($other)* $next) $($prefix)*][$($postfix)*]($($body)*)]
-				$($rest)*
-			]
-		}
-	};
-	(	// done promoting a checked block to prefix (brace type)
-		@promote[
-			[$lazy:tt $modefix:tt [$promoted:tt $($prefix:tt)*][$($postfix:tt)*]{}]
-			$($rest:tt)*
-		]
-	)=>{
-		eager_internal!{
 			@check_expansion[
-				[$lazy $modefix [$promoted $($prefix)*][]]
+				[$lazy $modefix [($($body)*) $($prefix)*][]]
 				$($rest)*
 			]
 			$($postfix)*
 		}
 	};
-	(	// done promoting a checked block to prefix (paren type)
-		@promote[
-			[$lazy:tt $modefix:tt [$promoted:tt $($prefix:tt)*][$($postfix:tt)*]()]
-			$($rest:tt)*
+// End Promote block to prefix
+// Finished
+	(	// When there is no more input and no block
+		// output the result, reversing it to ensure correct order
+		@check_expansion[
+			[$lazy:tt [][$($result:tt)*][]]
 		]
 	)=>{
-		eager_internal!{
-			@check_expansion[
-				[$lazy $modefix [$promoted $($prefix)*][]]
-				$($rest)*
-			]
-			$($postfix)*
-		}
+		reverse_tt!{[$($result)*]}
 	};
 }
 
