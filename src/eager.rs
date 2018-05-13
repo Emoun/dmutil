@@ -36,10 +36,6 @@
 /// to the usual rules for macro expansion, and `eager!` block can be inserted inside the `lazy!`
 /// block, to re-enable eager expansion for some subset of it.
 ///
-/// __Note:__ A [`lazy!`] macro is provided with this crate only to mitigate name collisions.
-/// The macro does not do anything if called outside an `eager!` block.
-/// It will actually refuse to compile, emitting a message explaining the same.
-///
 /// [`eager_macro_rules!`]: macro.eager_macro_rules.html
 /// [`lazy!`]: macro.lazy.html
 /// # Cons
@@ -245,14 +241,12 @@
 ///
 /// See the [`reverse_tt!`](macro.reverse_tt.html) documentation for an example.
 ///
-/// ## Auxiliary variables
+/// ## Auxiliary variable
 ///
-/// The two auxiliary variables that must always be provided to `eager_macro_rules!`
-/// must use the identifiers `eager_1` and `eager_2`, in that order. This makes it easier for everyone to
-/// get used to their presence and ignore them. By having them be the same in every project,
-/// no one has to think about why a given project uses some specific identifiers.
-///
-///
+/// The auxiliary variable that must always be provided to `eager_macro_rules!`
+/// must use the identifier `eager_1`. This makes it easier for everyone to
+/// get used to its presence and ignore it. By having it be the same in every project,
+/// no one has to think about why a given project uses some specific identifier.
 ///
 /// # Trivia
 ///
@@ -260,9 +254,13 @@
 /// it is nested or a macro expands into an `eager!` block.
 /// Likewise, `eager_macro_rules!` is not `eager!`-enabled, though this might be possible.
 ///
-/// * `eager_macro_rules!`'s two auxiliary variables are affectionately called `Simon & Garkel`,
-/// `eager_1` being `Simon` and `eager_2` being `Garkel`. These nicknames should probably not be
-/// used as identifiers in production code. Before reaching production, though...
+/// * `lazy!` is treated by `eager!` as a keyword and not a macro.
+///
+/// * `eager_macro_rules!`'s auxiliary variable is affectionately called `Simon`.
+/// This nickname should probably not be used as the identifier in production code.
+/// Before reaching production, though...
+///
+/// * Simon once had a brother called `Garkel`.
 ///
 /// * It requires continuous effort from [Emoun](http://github.com/Emoun) to not
 /// forcibly rename `eager_macro_rules!` to `eager_macros_rule`.

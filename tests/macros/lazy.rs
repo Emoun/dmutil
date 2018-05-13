@@ -31,31 +31,33 @@ mod test_eager_in_lazy{
 	
 	eager_macro_rules!{ $eager_1
 		macro_rules! test_macro_1{
-			()=> {1}
+			()=> {3}
 		}
 	}
 	macro_rules! test_macro_2{
-		(! 1 ?) => {2};
+		(1 2 3 4 5) => {1};
 	}
 	
 	#[test]
 	fn test(){
-		//trace_macros!(true);
 		let x = eager!{
-			1 +
+			00010 +
 			lazy!{
+				00100 +
 				test_macro_2!{
-					!
+					1
 					eager!{
+						2
 						test_macro_1!{}
+						4
 					}
-					?
+					5
 				}
+				+ 01000
 			}
-			+ 1
+			+ 10000
 		};
-		//trace_macros!(false);
-		assert_eq!(4, x);
+		assert_eq!(11111, x);
 	}
 }
 

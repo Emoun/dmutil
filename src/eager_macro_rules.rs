@@ -4,14 +4,14 @@
 ///
 /// # Usage
 ///
-/// Wraps the usual `macro_rules!` syntax. First two identifiers must be given, preceded by '$'.
+/// Wraps the usual `macro_rules!` syntax. First an identifier must be given, preceded by '$'.
 /// Then any number of macro declarations can be given using the usual `macro_rules!` syntax.
 /// Documentation and attributes are also given in the
 /// usual way just before each `macro_rules!`, i.e. inside `eager_macro_rules!`.
 ///
 /// Some restrictions apply to the macro_rules! declarations:
 ///
-/// * The two identifiers given at the beginning must not collide with any macro variable name
+/// * The identifier given at the beginning must not collide with any macro variable name
 /// used in any rule in any macro to be declared.
 /// * No rules should accept `@eager` as the first token, as this could conflict with the
 /// implementation of `eager!`. Wildcards may be used, as `eager_macro_rules!` will automatically
@@ -39,7 +39,7 @@
 /// }
 /// ```
 /// where `()=>{};` is the list of rules that comprise the macro, and no macro variable is called
-/// `$eager_1` or `$eager_2`.
+/// `$eager_1`.
 ///
 #[macro_export]
 macro_rules! eager_macro_rules{
