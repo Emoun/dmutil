@@ -23,7 +23,7 @@ mod test_lazy_block_is_ignored {
 		assert_eq!(3, x)
 	}
 }
-/*
+
 mod test_eager_in_lazy{
 	/*
 	Tests that eager! blocks are eagerly expanded even though they are inside a lazy block
@@ -40,8 +40,8 @@ mod test_eager_in_lazy{
 	
 	#[test]
 	fn test(){
-		trace_macros!(true);
-		x = eager!{
+		//trace_macros!(true);
+		let x = eager!{
 			1 +
 			lazy!{
 				test_macro_2!{
@@ -54,11 +54,11 @@ mod test_eager_in_lazy{
 			}
 			+ 1
 		};
-		trace_macros!(false);
-		assert_eq!(3, x);
+		//trace_macros!(false);
+		assert_eq!(4, x);
 	}
 }
-*/
+
 // Same tests as above, but with the '()' block type
 mod paren_test_lazy_block_is_ignored {
 	/*

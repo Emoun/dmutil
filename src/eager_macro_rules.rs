@@ -30,7 +30,7 @@
 /// The whole above declaration must be changed to:
 /// ```
 /// #[macro_use] extern crate dmutil;
-/// eager_macro_rules!{ $eager_1 $eager_2
+/// eager_macro_rules!{ $eager_1
 /// 	/// Some documentation
 ///     #[macro_export]
 ///     macro_rules! some_macro{
